@@ -13,9 +13,11 @@ import {
   Share2, 
   MessageSquare,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Truck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const MOCK_NODES: JourneyNode[] = [
   { 
