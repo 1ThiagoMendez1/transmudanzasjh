@@ -88,7 +88,7 @@ export default function PublicTrackingPage() {
         </div>
 
         <footer className="text-center text-muted-foreground text-sm py-8">
-          <p>© 2024 TrajectoFlow. Todos los derechos reservados.</p>
+          <p>© 2024 TransmudanzasJH. Todos los derechos reservados.</p>
           <div className="flex justify-center gap-4 mt-2">
             <a href="#" className="hover:text-primary transition-colors">Soporte</a>
             <a href="#" className="hover:text-primary transition-colors">Términos</a>

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { estimateQuoteDetails } from '@/ai/flows/estimate-quote-details';
 import { predictJourneyExpenses } from '@/ai/flows/predict-journey-expenses';
 import { Sparkles, ArrowRight, Loader2, Info } from 'lucide-react';
@@ -147,7 +146,7 @@ export default function QuotesPage() {
                 disabled={loading}
               >
                 {loading ? <Loader2 className="animate-spin" /> : <Sparkles size={18} />}
-                {loading ? "Analizando con IA..." : "Analizar con Trajecto IA"}
+                {loading ? "Analizando con IA..." : "Analizar con TransmudanzasJH IA"}
               </Button>
             </CardContent>
           </Card>

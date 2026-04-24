@@ -3,13 +3,12 @@
 import React, { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { SnakeJourney, JourneyNode } from '@/components/SnakeJourney';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
   TrendingDown, 
   Wallet, 
-  Plus, 
   Share2, 
   MessageSquare,
   FileText,
@@ -78,7 +77,7 @@ export default function Dashboard() {
       {/* Dynamic Header */}
       <header className="flex items-center justify-between mb-12">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">¡Hola, TrajectoFlow! 🚛</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-2">¡Hola, TransmudanzasJH! 🚛</h1>
           <p className="text-muted-foreground">Monitoreo activo del viaje: <span className="font-bold text-primary">GUIA-000842</span></p>
         </div>
         

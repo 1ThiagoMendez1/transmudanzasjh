@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'TrajectoFlow | Logística Moderna',
+  title: 'TransmudanzasJH | Logística Moderna',
   description: 'Gestión inteligente y visual de rutas de transporte y mudanzas.',
 };
 
