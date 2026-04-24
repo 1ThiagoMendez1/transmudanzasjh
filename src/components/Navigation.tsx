@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -7,15 +8,16 @@ import {
   LayoutDashboard, 
   FileText, 
   Truck, 
-  Users, 
   Search, 
   Settings, 
   BarChart3, 
-  Box 
+  Box,
+  Home
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/', label: 'Inicio', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/quotes', label: 'Cotizaciones', icon: FileText },
   { href: '/fleet', label: 'Flota', icon: Truck },
   { href: '/warehouse', label: 'Bodegaje', icon: Box },

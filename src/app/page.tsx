@@ -1,242 +1,256 @@
+
 "use client";
 
 import React, { useState } from 'react';
-import { Navigation } from '@/components/Navigation';
-import { SnakeJourney, JourneyNode } from '@/components/SnakeJourney';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Share2, 
-  MessageSquare,
-  FileText,
-  ChevronRight,
-  Truck
-} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { 
+  Truck, 
+  Search, 
+  Sparkles, 
+  ShieldCheck, 
+  Clock, 
+  ArrowRight, 
+  Camera, 
+  MapPin,
+  Package
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-const MOCK_NODES: JourneyNode[] = [
-  { 
-    id: '1', 
-    type: 'start', 
-    label: 'Origen', 
-    time: '08:00 AM', 
-    status: 'completed',
-    details: { address: 'Calle 100, Bogotá' }
-  },
-  { 
-    id: '2', 
-    type: 'loading', 
-    label: 'Cargue #1', 
-    time: '10:30 AM', 
-    status: 'completed',
-    details: { client: 'Juan Perez', address: 'Calle 140, Bogotá', description: 'Mudanza residencial' }
-  },
-  { 
-    id: '3', 
-    type: 'expense', 
-    label: 'Peaje', 
-    time: '01:15 PM', 
-    status: 'completed',
-    details: { amount: 15000, description: 'Peaje Andes' }
-  },
-  { 
-    id: '4', 
-    type: 'delivery', 
-    label: 'Entrega #1', 
-    time: '03:45 PM', 
-    status: 'current',
-    details: { client: 'Juan Perez', address: 'Tunja, Boyacá' }
-  },
-  { 
-    id: '5', 
-    type: 'return', 
-    label: 'Regreso', 
-    time: '--:--', 
-    status: 'pending' 
-  },
-  { 
-    id: '6', 
-    type: 'closure', 
-    label: 'Cierre', 
-    time: '--:--', 
-    status: 'pending' 
-  },
-];
+export default function LandingPage() {
+  const router = useRouter();
+  const [trackingId, setTrackingId] = useState('');
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-logistics');
 
-export default function Dashboard() {
-  const [activeNode, setActiveNode] = useState<JourneyNode | null>(null);
+  const handleTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (trackingId.trim()) {
+      router.push(`/tracking/${trackingId}`);
+    }
+  };
 
   return (
-    <div className="min-h-screen pl-32 pr-8 py-8 bg-background">
-      <Navigation />
-      
-      {/* Dynamic Header */}
-      <header className="flex items-center justify-between mb-12">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">¡Hola, TransmudanzasJH! 🚛</h1>
-          <p className="text-muted-foreground">Monitoreo activo del viaje: <span className="font-bold text-primary">GUIA-000842</span></p>
-        </div>
-        
-        <div className="flex gap-4">
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-primary/10 rounded-full text-primary">
-                <Wallet size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Fondo Restante</p>
-                <p className="text-lg font-bold">$1.240.000</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-destructive/10 rounded-full text-destructive">
-                <TrendingDown size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Gastos Hoy</p>
-                <p className="text-lg font-bold">$360.000</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-secondary/10 rounded-full text-secondary">
-                <TrendingUp size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Proyección</p>
-                <p className="text-lg font-bold text-primary">$4.800.000</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <div className="grid grid-cols-12 gap-8">
-        {/* Snake Visualization Section */}
-        <section className="col-span-12 lg:col-span-9 space-y-8">
-          <div className="relative glass-card rounded-[2rem] p-12 overflow-hidden bg-gradient-to-br from-white to-background">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Truck size={200} />
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-primary/20">
+              T
             </div>
-            
-            <div className="flex justify-between items-center mb-8 relative z-10">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                Recorrido en Vivo
-                <span className="inline-block w-2 h-2 bg-primary rounded-full animate-ping" />
-              </h2>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="rounded-xl gap-2">
-                  <Share2 size={16} /> Compartir
+            <span className="text-xl font-bold tracking-tight">TransmudanzasJH</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors">Características</a>
+            <a href="#quote" className="text-sm font-medium hover:text-primary transition-colors">Cotizar</a>
+            <a href="#track" className="text-sm font-medium hover:text-primary transition-colors">Rastrear</a>
+            <Button onClick={() => router.push('/dashboard')} variant="outline" className="rounded-full px-6">
+              Acceso Empleados
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-40 pb-20 md:pt-60 md:pb-40">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-8"
+            >
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider">
+                <Sparkles size={14} /> Logística impulsada por IA
+              </div>
+              <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+                Tus pertenencias, <br />
+                <span className="text-primary">seguras y a tiempo.</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+                Reinventamos las mudanzas en Colombia con tecnología de punta, rastreo en tiempo real y cotizaciones inteligentes en segundos.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" onClick={() => document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' })} className="rounded-2xl h-14 px-8 text-lg gap-2 shadow-xl shadow-primary/20">
+                  Cotizar Ahora <ArrowRight size={20} />
                 </Button>
-                <Button size="sm" className="rounded-xl gap-2 shadow-lg shadow-primary/20">
-                  <MessageSquare size={16} /> WhatsApp
+                <Button size="lg" variant="outline" onClick={() => document.getElementById('track')?.scrollIntoView({ behavior: 'smooth' })} className="rounded-2xl h-14 px-8 text-lg">
+                  Rastrear Guía
                 </Button>
               </div>
-            </div>
+            </motion.div>
 
-            <SnakeJourney nodes={MOCK_NODES} onNodeClick={setActiveNode} />
-          </div>
-
-          {/* Bottom Timeline Section */}
-          <div className="glass-card rounded-[2rem] p-8">
-            <h3 className="text-xl font-bold mb-6">Bitácora de Eventos</h3>
-            <div className="space-y-4">
-              {MOCK_NODES.filter(n => n.status !== 'pending').map((node, i) => (
-                <div key={node.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-2xl transition-colors">
-                  <div className="text-sm font-bold text-muted-foreground w-20">{node.time}</div>
-                  <div className={cn("w-2 h-2 rounded-full", node.status === 'completed' ? 'bg-primary' : 'bg-primary animate-pulse')} />
-                  <div className="flex-1">
-                    <p className="font-bold">{node.label}</p>
-                    <p className="text-xs text-muted-foreground">{node.details?.description || node.details?.address || 'Sin detalles'}</p>
-                  </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Side Panel (Contextual) */}
-        <aside className="col-span-12 lg:col-span-3 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="glass-card rounded-[2rem] p-6 sticky top-8"
-          >
-            {activeNode ? (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-xl">Detalle del Nodo</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveNode(null)}>Cerrar</Button>
-                </div>
-                
-                <div className="bg-muted p-4 rounded-2xl space-y-4">
-                  <div>
-                    <p className="text-xs uppercase font-bold text-muted-foreground">Evento</p>
-                    <p className="text-lg font-bold">{activeNode.label}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase font-bold text-muted-foreground">Estado</p>
-                    <p className="font-medium">{activeNode.status}</p>
-                  </div>
-                  {activeNode.details?.client && (
-                    <div>
-                      <p className="text-xs uppercase font-bold text-muted-foreground">Cliente</p>
-                      <p className="font-medium">{activeNode.details.client}</p>
-                    </div>
-                  )}
-                  {activeNode.details?.amount && (
-                    <div>
-                      <p className="text-xs uppercase font-bold text-muted-foreground">Costo</p>
-                      <p className="font-bold text-primary text-xl">${activeNode.details.amount.toLocaleString()}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Button className="w-full rounded-xl" variant="outline">
-                    Ver Evidencia Fotográfica
-                  </Button>
-                  <Button className="w-full rounded-xl bg-primary shadow-lg shadow-primary/20">
-                    Editar Información
-                  </Button>
-                </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="relative aspect-video rounded-[3rem] overflow-hidden shadow-2xl z-10">
+                <Image 
+                  src={heroImage?.imageUrl || ''} 
+                  alt="Logística Moderna" 
+                  fill 
+                  className="object-cover"
+                  data-ai-hint="modern logistics truck"
+                />
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="mb-4 inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full text-muted-foreground">
-                  <FileText size={32} />
-                </div>
-                <h3 className="font-bold text-lg mb-2">Selecciona un Nodo</h3>
-                <p className="text-sm text-muted-foreground">Haz clic en cualquier punto de la línea para ver sus detalles específicos.</p>
-              </div>
-            )}
-          </motion.div>
+              <div className="absolute -top-12 -right-12 w-64 h-64 bg-primary/20 rounded-full blur-3xl -z-10" />
+              <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-secondary/30 rounded-full blur-3xl -z-10" />
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
-          <div className="glass-card rounded-[2rem] p-6 bg-primary text-white overflow-hidden relative">
-            <div className="relative z-10">
-              <h4 className="font-bold text-lg mb-4">¿Necesitas ayuda?</h4>
-              <p className="text-sm text-white/80 mb-6">Contacta a soporte técnico especializado en operaciones logísticas.</p>
-              <Button variant="secondary" className="w-full rounded-xl font-bold">
-                Abrir Ticket
+      {/* Tracking Section */}
+      <section id="track" className="py-20 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-6 text-center space-y-8">
+          <div className="space-y-4">
+            <h2 className="text-3xl font-bold">¿Dónde está tu carga?</h2>
+            <p className="text-muted-foreground">Ingresa el número de tu guía para ver el estado en tiempo real.</p>
+          </div>
+          <Card className="glass-card border-none p-2 rounded-[2rem] max-w-2xl mx-auto shadow-2xl">
+            <form onSubmit={handleTrack} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                <Input 
+                  value={trackingId}
+                  onChange={(e) => setTrackingId(e.target.value)}
+                  placeholder="Ej: GUIA-000842" 
+                  className="h-16 pl-12 rounded-2xl border-none text-lg focus-visible:ring-0" 
+                />
+              </div>
+              <Button type="submit" className="h-16 px-8 rounded-2xl font-bold">
+                Buscar
               </Button>
+            </form>
+          </Card>
+        </div>
+      </section>
+
+      {/* Quote Section */}
+      <section id="quote" className="py-32">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-start">
+            <div className="space-y-12">
+              <div className="space-y-4">
+                <h2 className="text-4xl font-bold">Cotiza con IA en un clic</h2>
+                <p className="text-muted-foreground text-lg">
+                  Nuestra inteligencia artificial analiza el volumen de tus objetos para darte el precio más justo y el vehículo adecuado.
+                </p>
+              </div>
+
+              <div className="space-y-8">
+                {[
+                  { icon: ShieldCheck, title: "Seguro Todo Riesgo", desc: "Tus bienes protegidos desde el cargue hasta la entrega." },
+                  { icon: Clock, title: "Puntualidad Extrema", desc: "Si llegamos tarde, te devolvemos un porcentaje del valor." },
+                  { icon: Camera, title: "Análisis Fotográfico", desc: "Sube una foto de tu carga y nuestra IA estimará el espacio." }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-6 items-start">
+                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+                      <item.icon size={28} />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-1">{item.title}</h4>
+                      <p className="text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="absolute -bottom-4 -right-4 opacity-10">
-              <Share2 size={100} />
-            </div>
+
+            <Card className="glass-card border-none rounded-[3rem] p-8 md:p-12 shadow-2xl overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Package size={100} />
+              </div>
+              <CardContent className="space-y-6 p-0 relative z-10">
+                <div className="space-y-2">
+                  <Label className="text-lg font-bold">¿Qué vas a transportar?</Label>
+                  <Textarea 
+                    placeholder="Describe tus objetos (ej: 2 camas, 10 cajas, nevera...)" 
+                    className="rounded-2xl min-h-[120px] text-lg p-4 border-muted"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-bold">Origen</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                      <Input placeholder="Ciudad" className="pl-10 rounded-xl" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Destino</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                      <Input placeholder="Ciudad" className="pl-10 rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="font-bold block">Evidencia Fotográfica (Opcional)</Label>
+                  <div className="border-2 border-dashed border-primary/20 rounded-[2rem] p-8 text-center hover:bg-primary/5 transition-colors cursor-pointer group">
+                    <Camera className="mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" size={40} />
+                    <p className="text-sm font-medium">Sube fotos de tus objetos para una cotización más precisa</p>
+                    <p className="text-xs text-muted-foreground mt-2">JPG, PNG hasta 5MB</p>
+                    <input type="file" className="hidden" />
+                  </div>
+                </div>
+
+                <Button className="w-full h-16 rounded-2xl text-xl font-bold bg-primary shadow-xl shadow-primary/30 group">
+                  Obtener Cotización IA <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </aside>
-      </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-foreground text-background py-20 mt-20">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="col-span-1 md:col-span-2 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold">
+                T
+              </div>
+              <span className="text-2xl font-bold">TransmudanzasJH</span>
+            </div>
+            <p className="text-background/60 max-w-sm">
+              Líderes en logística de mudanzas inteligentes en Colombia. Seguridad, rapidez y transparencia en cada kilómetro.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h4 className="font-bold">Servicios</h4>
+            <ul className="space-y-2 text-background/60 text-sm">
+              <li><a href="#" className="hover:text-primary transition-colors">Mudanzas Nacionales</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Bodegaje Inteligente</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Embalaje Profesional</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Transporte Empresarial</a></li>
+            </ul>
+          </div>
+          <div className="space-y-4">
+            <h4 className="font-bold">Contacto</h4>
+            <ul className="space-y-2 text-background/60 text-sm">
+              <li>Bogotá, Colombia</li>
+              <li>+57 300 000 0000</li>
+              <li>soporte@transmudanzasjh.com</li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 pt-12 mt-12 border-t border-background/10 text-center text-sm text-background/40">
+          © 2024 TransmudanzasJH. Todos los derechos reservados.
+        </div>
+      </footer>
     </div>
   );
 }
