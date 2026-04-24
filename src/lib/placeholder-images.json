@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-logistics",
+      "description": "Modern truck on a clean highway with green scenery",
+      "imageUrl": "https://picsum.photos/seed/trajecto1/1200/800",
+      "imageHint": "modern logistics truck"
+    },
+    {
+      "id": "avatar-driver",
+      "description": "Professional smiling delivery driver",
+      "imageUrl": "https://picsum.photos/seed/driver/200/200",
+      "imageHint": "happy delivery driver"
+    },
+    {
+      "id": "cargo-detail",
+      "description": "Carefully packed boxes in a modern warehouse",
+      "imageUrl": "https://picsum.photos/seed/cargo/400/300",
+      "imageHint": "moving boxes"
+    }
+  ]
 }
