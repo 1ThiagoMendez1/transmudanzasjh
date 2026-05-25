@@ -21,11 +21,18 @@ export type JourneyNode = {
   label: string;
   time: string;
   status: 'completed' | 'current' | 'pending';
+  isExtra?: boolean;
+  isOriginalFinal?: boolean;
   details?: {
     client?: string;
     address?: string;
     amount?: number;
     description?: string;
+    sender?: string;
+    sendDate?: string;
+    receiver?: string;
+    receiveDate?: string;
+    photosCount?: number;
   };
 };
 
@@ -101,13 +108,24 @@ export function SnakeJourney({ nodes, onNodeClick }: SnakeJourneyProps) {
                 whileHover={{ scale: 1.2, y: -5 }}
                 className={cn(
                   "w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 shadow-lg",
-                  node.status === 'completed' ? "bg-primary text-white" :
-                  node.status === 'current' ? "bg-white border-4 border-primary text-primary snake-node-active animate-pulse" :
+                  node.isExtra ? "ring-4 ring-amber-500/30" : "",
+                  node.status === 'completed' ? (node.isExtra ? "bg-amber-500 text-white" : "bg-primary text-white") :
+                  node.status === 'current' ? `bg-white border-4 ${node.isExtra ? 'border-amber-500 text-amber-500' : 'border-primary text-primary'} snake-node-active animate-pulse` :
                   "bg-muted text-muted-foreground"
                 )}
               >
                 <Icon size={24} />
               </motion.div>
+              {node.isOriginalFinal && (
+                <div className="absolute -top-3 bg-secondary text-secondary-foreground text-[9px] font-bold px-2 py-0.5 rounded-full border border-background shadow-sm whitespace-nowrap z-20">
+                  Destino Inicial
+                </div>
+              )}
+              {node.isExtra && (
+                <div className="absolute -top-3 bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-background shadow-sm whitespace-nowrap z-20">
+                  Ruta Extra
+                </div>
+              )}
               
               <div className="absolute top-16 text-center w-32">
                 <p className="font-bold text-sm text-foreground">{node.label}</p>
@@ -132,6 +150,12 @@ export function SnakeJourney({ nodes, onNodeClick }: SnakeJourneyProps) {
                       <div className="space-y-2">
                         {node.details.client && (
                           <p className="text-sm font-semibold text-foreground">Cliente: {node.details.client}</p>
+                        )}
+                        {node.details.sender && (
+                          <p className="text-xs text-foreground"><span className="font-bold">De:</span> {node.details.sender}</p>
+                        )}
+                        {node.details.receiver && (
+                          <p className="text-xs text-foreground"><span className="font-bold">Para:</span> {node.details.receiver}</p>
                         )}
                         {node.details.address && (
                           <p className="text-xs text-muted-foreground truncate">{node.details.address}</p>

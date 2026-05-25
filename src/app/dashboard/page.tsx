@@ -1,224 +1,185 @@
-
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Navigation } from '@/components/Navigation';
-import { SnakeJourney, JourneyNode } from '@/components/SnakeJourney';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Share2, 
-  MessageSquare,
-  FileText,
-  ChevronRight,
-  Truck
+  DollarSign,
+  FileText, 
+  Truck, 
+  Users,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity,
+  Calendar,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const MOCK_NODES: JourneyNode[] = [
-  { 
-    id: '1', 
-    type: 'start', 
-    label: 'Origen', 
-    time: '08:00 AM', 
-    status: 'completed',
-    details: { address: 'Calle 100, Bogotá' }
-  },
-  { 
-    id: '2', 
-    type: 'loading', 
-    label: 'Cargue #1', 
-    time: '10:30 AM', 
-    status: 'completed',
-    details: { client: 'Juan Perez', address: 'Calle 140, Bogotá', description: 'Mudanza residencial' }
-  },
-  { 
-    id: '3', 
-    type: 'expense', 
-    label: 'Peaje', 
-    time: '01:15 PM', 
-    status: 'completed',
-    details: { amount: 15000, description: 'Peaje Andes' }
-  },
-  { 
-    id: '4', 
-    type: 'delivery', 
-    label: 'Entrega #1', 
-    time: '03:45 PM', 
-    status: 'current',
-    details: { client: 'Juan Perez', address: 'Tunja, Boyacá' }
-  },
-  { 
-    id: '5', 
-    type: 'return', 
-    label: 'Regreso', 
-    time: '--:--', 
-    status: 'pending' 
-  },
-  { 
-    id: '6', 
-    type: 'closure', 
-    label: 'Cierre', 
-    time: '--:--', 
-    status: 'pending' 
-  },
+const kpiData = [
+  { title: "Ingresos del Mes", value: "$42.5M", change: "+12.5%", trend: "up", icon: DollarSign },
+  { title: "Cotizaciones Activas", value: "24", change: "+4", trend: "up", icon: FileText },
+  { title: "Vehículos en Ruta", value: "8/12", change: "2 en taller", trend: "neutral", icon: Truck },
+  { title: "Nuevos Clientes", value: "15", change: "-2%", trend: "down", icon: Users },
+];
+
+const recentActivity = [
+  { id: 1, type: 'quote_approved', title: 'Cotización Aprobada', desc: 'Mudanza Bogotá - Medellín', time: 'Hace 2 horas', value: '$2.5M', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+  { id: 2, type: 'route_started', title: 'Ruta Iniciada', desc: 'Furgón NPR (XYZ-123)', time: 'Hace 4 horas', value: 'Origen: Cali', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  { id: 3, type: 'quote_pending', title: 'Nueva Cotización', desc: 'Oficina 100m2 Norte', time: 'Hace 5 horas', value: 'Pendiente', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  { id: 4, type: 'payment_received', title: 'Pago Recibido', desc: 'Anticipo 50% - Guía 00842', time: 'Ayer', value: '$1.2M', icon: DollarSign, color: 'text-primary', bg: 'bg-primary/10' },
 ];
 
 export default function Dashboard() {
-  const [activeNode, setActiveNode] = useState<JourneyNode | null>(null);
-
   return (
-    <div className="min-h-screen pl-32 pr-8 py-8 bg-background">
+    <div className="min-h-screen px-4 pb-24 pt-8 md:pl-[140px] md:pr-8 md:py-8 bg-background max-w-[100vw] overflow-x-hidden">
       <Navigation />
       
-      <header className="flex items-center justify-between mb-12">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">¡Hola, TransmudanzasJH! 🚛</h1>
-          <p className="text-muted-foreground">Monitoreo activo del viaje: <span className="font-bold text-primary">GUIA-000842</span></p>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Visión General</h1>
+          <p className="text-muted-foreground">Bienvenido de nuevo, aquí tienes un resumen de tu negocio hoy.</p>
         </div>
-        
-        <div className="flex gap-4">
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-primary/10 rounded-full text-primary">
-                <Wallet size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Fondo Restante</p>
-                <p className="text-lg font-bold">$1.240.000</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-destructive/10 rounded-full text-destructive">
-                <TrendingDown size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Gastos Hoy</p>
-                <p className="text-lg font-bold">$360.000</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card overflow-hidden">
-            <CardContent className="flex items-center gap-4 py-3 px-6">
-              <div className="p-2 bg-secondary/10 rounded-full text-secondary">
-                <TrendingUp size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Proyección</p>
-                <p className="text-lg font-bold text-primary">$4.800.000</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <Button variant="outline" className="rounded-xl gap-2"><Calendar size={16} /> Este Mes</Button>
+          <Button className="rounded-xl gap-2 shadow-lg shadow-primary/20"><Activity size={16} /> Generar Reporte</Button>
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-8">
-        <section className="col-span-12 lg:col-span-9 space-y-8">
-          <div className="relative glass-card rounded-[2rem] p-12 overflow-hidden bg-gradient-to-br from-white to-background">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Truck size={200} />
-            </div>
-            
-            <div className="flex justify-between items-center mb-8 relative z-10">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                Recorrido en Vivo
-                <span className="inline-block w-2 h-2 bg-primary rounded-full animate-ping" />
-              </h2>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="rounded-xl gap-2">
-                  <Share2 size={16} /> Compartir
-                </Button>
-                <Button size="sm" className="rounded-xl gap-2 shadow-lg shadow-primary/20">
-                  <MessageSquare size={16} /> WhatsApp
-                </Button>
-              </div>
-            </div>
-
-            <SnakeJourney nodes={MOCK_NODES} onNodeClick={setActiveNode} />
-          </div>
-
-          <div className="glass-card rounded-[2rem] p-8">
-            <h3 className="text-xl font-bold mb-6">Bitácora de Eventos</h3>
-            <div className="space-y-4">
-              {MOCK_NODES.filter(n => n.status !== 'pending').map((node) => (
-                <div key={node.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-2xl transition-colors">
-                  <div className="text-sm font-bold text-muted-foreground w-20">{node.time}</div>
-                  <div className={cn("w-2 h-2 rounded-full", node.status === 'completed' ? 'bg-primary' : 'bg-primary animate-pulse')} />
-                  <div className="flex-1">
-                    <p className="font-bold">{node.label}</p>
-                    <p className="text-xs text-muted-foreground">{node.details?.description || node.details?.address || 'Sin detalles'}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        {kpiData.map((kpi, i) => {
+          const Icon = kpi.icon;
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <Card className="glass-card hover:shadow-xl transition-all duration-300 border-white/20 dark:border-white/10 h-full">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                      <Icon size={24} />
+                    </div>
+                    <span className={cn(
+                      "flex items-center text-xs font-bold px-2 py-1 rounded-full",
+                      kpi.trend === 'up' ? "text-green-600 bg-green-500/10" : 
+                      kpi.trend === 'down' ? "text-red-600 bg-red-500/10" : 
+                      "text-muted-foreground bg-muted"
+                    )}>
+                      {kpi.trend === 'up' && <ArrowUpRight size={14} className="mr-1" />}
+                      {kpi.trend === 'down' && <ArrowDownRight size={14} className="mr-1" />}
+                      {kpi.change}
+                    </span>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+                  <div>
+                    <h3 className="text-muted-foreground text-sm font-medium mb-1">{kpi.title}</h3>
+                    <p className="text-3xl font-bold text-foreground">{kpi.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
 
-        <aside className="col-span-12 lg:col-span-3 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="glass-card rounded-[2rem] p-6 sticky top-8"
-          >
-            {activeNode ? (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Ingresos Chart Placeholder */}
+          <Card className="glass-card border-white/20 dark:border-white/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold">Flujo de Ingresos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full flex items-end justify-between gap-2 pt-8 pb-2">
+                {[40, 60, 35, 75, 50, 85, 65, 90, 100, 70, 80, 95].map((h, i) => (
+                  <div key={i} className="w-full flex flex-col items-center gap-2 group">
+                    <div className="w-full bg-primary/20 rounded-t-sm relative group-hover:bg-primary/30 transition-colors" style={{ height: `${h}%` }}>
+                      <div className="absolute bottom-0 w-full bg-primary rounded-t-sm transition-all duration-500 group-hover:bg-primary/90" style={{ height: `${h * 0.7}%` }}></div>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase">{['E','F','M','A','M','J','J','A','S','O','N','D'][i]}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <Card className="glass-card border-white/20 dark:border-white/10">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase">Estado de la Flota</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1"><span className="font-medium">En Ruta (8)</span><span className="text-primary font-bold">66%</span></div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary w-[66%]"></div></div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1"><span className="font-medium">Disponibles (2)</span><span className="text-green-500 font-bold">16%</span></div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden"><div className="h-full bg-green-500 w-[16%]"></div></div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1"><span className="font-medium">Mantenimiento (2)</span><span className="text-destructive font-bold">16%</span></div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden"><div className="h-full bg-destructive w-[16%]"></div></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card border-white/20 dark:border-white/10">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase">Conversión de Cotizaciones</h3>
+                <div className="flex items-center justify-center h-32 relative">
+                   <div className="w-32 h-32 rounded-full border-[12px] border-primary/20 relative flex items-center justify-center">
+                     <div className="absolute inset-0 rounded-full border-[12px] border-primary border-t-transparent border-l-transparent transform rotate-45"></div>
+                     <div className="text-center">
+                       <span className="text-2xl font-bold block leading-none">68%</span>
+                       <span className="text-[10px] uppercase font-bold text-muted-foreground">Aprobadas</span>
+                     </div>
+                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="glass-card border-white/20 dark:border-white/10 h-full">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">Actividad Reciente</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-xl">Detalle del Nodo</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveNode(null)}>Cerrar</Button>
-                </div>
-                
-                <div className="bg-muted p-4 rounded-2xl space-y-4">
-                  <div>
-                    <p className="text-xs uppercase font-bold text-muted-foreground">Evento</p>
-                    <p className="text-lg font-bold">{activeNode.label}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase font-bold text-muted-foreground">Estado</p>
-                    <p className="font-medium">{activeNode.status}</p>
-                  </div>
-                  {activeNode.details?.client && (
-                    <div>
-                      <p className="text-xs uppercase font-bold text-muted-foreground">Cliente</p>
-                      <p className="font-medium">{activeNode.details.client}</p>
+                {recentActivity.map((activity, i) => {
+                  const Icon = activity.icon;
+                  return (
+                    <div key={activity.id} className="flex gap-4 relative">
+                      {i !== recentActivity.length - 1 && (
+                        <div className="absolute left-[19px] top-[40px] bottom-[-24px] w-[2px] bg-muted"></div>
+                      )}
+                      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10", activity.bg, activity.color)}>
+                        <Icon size={18} />
+                      </div>
+                      <div className="flex-1 pb-2">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="font-bold text-sm">{activity.title}</p>
+                          <span className="text-[10px] font-medium text-muted-foreground">{activity.time}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">{activity.desc}</p>
+                        <p className="text-sm font-semibold">{activity.value}</p>
+                      </div>
                     </div>
-                  )}
-                  {activeNode.details?.amount && (
-                    <div>
-                      <p className="text-xs uppercase font-bold text-muted-foreground">Costo</p>
-                      <p className="font-bold text-primary text-xl">${activeNode.details.amount.toLocaleString()}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Button className="w-full rounded-xl" variant="outline">
-                    Ver Evidencia Fotográfica
-                  </Button>
-                  <Button className="w-full rounded-xl bg-primary shadow-lg shadow-primary/20">
-                    Editar Información
-                  </Button>
-                </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="mb-4 inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full text-muted-foreground">
-                  <FileText size={32} />
-                </div>
-                <h3 className="font-bold text-lg mb-2">Selecciona un Nodo</h3>
-                <p className="text-sm text-muted-foreground">Haz clic en cualquier punto de la línea para ver sus detalles específicos.</p>
-              </div>
-            )}
-          </motion.div>
-        </aside>
+              <Button variant="outline" className="w-full mt-6 rounded-xl">Ver toda la actividad</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
