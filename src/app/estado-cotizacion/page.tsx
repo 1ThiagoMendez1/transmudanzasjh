@@ -87,7 +87,7 @@ export default function QuoteStatusPage() {
                   <div className="space-y-2">
                     <Label className="text-base">Número de Cotización</Label>
                     <Input 
-                      placeholder="Ej: MIVRA-1234" 
+                      placeholder="Ej: TRANS-1234" 
                       className="rounded-xl h-14 text-lg text-center uppercase"
                       value={credentials.id}
                       onChange={e => setCredentials({...credentials, id: e.target.value})}

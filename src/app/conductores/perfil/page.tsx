@@ -10,22 +10,18 @@ import { Progress } from "@/components/ui/progress";
 export default function PerfilConductor() {
   // Simulated data for demonstration
   const driver = {
-    name: "Carlos Martínez",
-    photo: "https://i.pravatar.cc/150?u=carlos",
-    level: "Maestro de Ruta",
-    points: 2450,
-    nextLevelPoints: 3000,
+    name: "Sin Nombre",
+    photo: "",
+    level: "Nivel 1",
+    points: 0,
+    nextLevelPoints: 1000,
     status: "Disponible",
-    completedRoutes: 142,
+    completedRoutes: 0,
   };
 
   const progressPercentage = (driver.points / driver.nextLevelPoints) * 100;
 
-  const achievements = [
-    { id: 1, title: "Entrega Perfecta", date: "Hoy, 10:30 AM", icon: Star, color: "text-yellow-500", bg: "bg-yellow-100" },
-    { id: 2, title: "Ruta sin Incidentes", date: "Ayer", icon: ShieldCheck, color: "text-green-500", bg: "bg-green-100" },
-    { id: 3, title: "Cliente Satisfecho", date: "Hace 2 días", icon: Trophy, color: "text-blue-500", bg: "bg-blue-100" },
-  ];
+  const achievements: any[] = [];
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -36,13 +32,13 @@ export default function PerfilConductor() {
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-white shadow-lg">
               <AvatarImage src={driver.photo} alt={driver.name} />
-              <AvatarFallback className="text-2xl font-bold bg-blue-100 text-blue-700">CM</AvatarFallback>
+              <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">CM</AvatarFallback>
             </Avatar>
             <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-white rounded-full"></div>
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mt-4">{driver.name}</h1>
           <div className="flex items-center gap-2 mt-1">
-            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none">
+            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none">
               <Medal className="w-3 h-3 mr-1" />
               {driver.level}
             </Badge>
@@ -52,7 +48,7 @@ export default function PerfilConductor() {
 
         {/* Gamification / Points Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="border-none shadow-md bg-gradient-to-br from-blue-600 to-indigo-700 text-white overflow-hidden relative">
+          <Card className="border-none shadow-md bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden relative">
             <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
               <Trophy className="w-32 h-32" />
             </div>
@@ -110,7 +106,7 @@ export default function PerfilConductor() {
         {/* Achievements */}
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
+            <TrendingUp className="w-5 h-5 text-primary" />
             Últimos Logros
           </h3>
           <div className="space-y-3">

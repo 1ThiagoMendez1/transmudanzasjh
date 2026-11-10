@@ -22,10 +22,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { getSession } from "@/app/actions/auth";
+import { getAllActiveJourneys, ActiveJourney } from "@/lib/routes";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 const EXPENSE_CATEGORIES = [
-  { id: "gasolina", label: "Gasolina", icon: Fuel, color: "bg-orange-500", lightColor: "bg-orange-100", textColor: "text-orange-600" },
-  { id: "peajes", label: "Peajes", icon: Ticket, color: "bg-blue-500", lightColor: "bg-blue-100", textColor: "text-blue-600" },
+  { id: "combustible", label: "Combustible", icon: Fuel, color: "bg-orange-500", lightColor: "bg-orange-100", textColor: "text-orange-600" },
+  { id: "peajes", label: "Peajes", icon: Ticket, color: "bg-primary", lightColor: "bg-primary/10", textColor: "text-primary" },
   { id: "hoteles", label: "Hoteles", icon: Hotel, color: "bg-purple-500", lightColor: "bg-purple-100", textColor: "text-purple-600" },
   { id: "mecanica", label: "Mecánica", icon: Wrench, color: "bg-red-500", lightColor: "bg-red-100", textColor: "text-red-600" },
   { id: "comida", label: "Comida", icon: Utensils, color: "bg-green-500", lightColor: "bg-green-100", textColor: "text-green-600" },
@@ -41,7 +45,32 @@ export default function ConductoresPage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeRoute, setActiveRoute] = useState<ActiveJourney | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const session = await getSession();
+        if (!session) return;
+        
+        const driverName = session.name;
+        const allJourneys = await getAllActiveJourneys();
+        const currentJourney = allJourneys.find(j => j.driver === driverName && j.status !== 'Finalizado' && j.status !== 'finalizada');
+        
+        if (currentJourney) {
+          setActiveRoute(currentJourney);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingRoute(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleCategoryClick = (category: typeof EXPENSE_CATEGORIES[0]) => {
     setSelectedCategory(category);
@@ -61,7 +90,7 @@ export default function ConductoresPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !photo) {
       toast({
@@ -72,14 +101,89 @@ export default function ConductoresPage() {
       return;
     }
 
-    // Simulate submission
-    setTimeout(() => {
+    if (!activeRoute) {
+      toast({
+        title: "Sin ruta activa",
+        description: "Debes tener una ruta activa para registrar gastos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let finalPhotoUrl = null;
+
+      toast({ title: "Subiendo evidencia...", description: "Por favor espera." });
+      const fileExt = photo.name.split('.').pop() || 'jpg';
+      const fileName = `exp_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${activeRoute.id}/${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('evidencias')
+        .upload(filePath, photo);
+
+      if (uploadError) {
+        console.error("Error uploading photo:", uploadError);
+        toast({ title: "Advertencia", description: "El gasto se guardará pero la foto no pudo subirse.", variant: "destructive" });
+      } else if (data) {
+        const { data: publicUrlData } = supabase.storage
+          .from('evidencias')
+          .getPublicUrl(filePath);
+        
+        finalPhotoUrl = publicUrlData.publicUrl;
+      }
+
+      const amountNum = parseFloat(amount);
+      const newNode = {
+        journey_id: activeRoute.id,
+        node_id: `exp-${Date.now()}`,
+        type: 'expense',
+        label: selectedCategory?.label || "Otro",
+        time_str: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'completed',
+        sequence_order: Date.now(),
+        details: {
+          description: notes,
+          photoUrl: finalPhotoUrl,
+          photosCount: finalPhotoUrl ? 1 : 0,
+          amount: amountNum
+        }
+      };
+
+      await supabase.from('journey_nodes').insert([newNode]);
+      
+      const currentSpentStr = activeRoute.spent || "$0";
+      const currentSpent = parseInt(currentSpentStr.replace(/[^\d-]/g, '') || '0', 10);
+      const newSpent = currentSpent + amountNum;
+      
+      const currentFundStr = activeRoute.fund || "$0";
+      const currentFund = parseInt(currentFundStr.replace(/[^\d-]/g, '') || '0', 10);
+      const newFund = currentFund - amountNum;
+      
+      await supabase.from('active_journeys').update({ 
+        spent: `$${newSpent.toLocaleString('es-CO')}`,
+        fund: `$${newFund.toLocaleString('es-CO')}`
+      }).eq('id', activeRoute.id);
+      
+      await supabase.from('expenses').insert([{
+        journey_id: activeRoute.id,
+        amount: amountNum,
+        description: notes,
+        category: selectedCategory?.label || "Otro"
+      }]);
+
       toast({
         title: "Gasto reportado",
-        description: `El gasto de ${selectedCategory?.label} por $${amount} ha sido enviado.`,
+        description: `El gasto de ${selectedCategory?.label} por $${amountNum.toLocaleString('es-CO')} ha sido enviado.`,
       });
       setIsModalOpen(false);
-    }, 600);
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo registrar el gasto.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -88,7 +192,7 @@ export default function ConductoresPage() {
         
         {/* Header Section */}
         <div className="text-center mb-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-white mb-4 shadow-lg">
             <Truck className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Reporte de Gastos</h1>
@@ -118,7 +222,7 @@ export default function ConductoresPage() {
       {/* Expense Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl p-0 overflow-hidden bg-white max-h-[90vh] overflow-y-auto">
-          <div className={`h-2 w-full ${selectedCategory?.color || 'bg-blue-600'}`}></div>
+          <div className={`h-2 w-full ${selectedCategory?.color || 'bg-primary'}`}></div>
           
           <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
             <DialogHeader className="text-left space-y-0 pb-2">
@@ -225,11 +329,11 @@ export default function ConductoresPage() {
             </div>
 
             <DialogFooter className="mt-2 flex-col sm:flex-col gap-2">
-              <Button type="submit" className="w-full py-6 text-lg rounded-xl font-semibold shadow-md bg-blue-600 hover:bg-blue-700" size="lg">
-                <Upload className="w-5 h-5 mr-2" />
+              <Button type="submit" disabled={isSubmitting} className="w-full py-6 text-lg rounded-xl font-semibold shadow-md bg-primary hover:bg-primary/90" size="lg">
+                {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Upload className="w-5 h-5 mr-2" />}
                 Registrar Gasto
               </Button>
-              <Button type="button" variant="ghost" className="w-full py-6 text-slate-500" onClick={() => setIsModalOpen(false)}>
+              <Button type="button" disabled={isSubmitting} variant="ghost" className="w-full py-6 text-slate-500" onClick={() => setIsModalOpen(false)}>
                 Cancelar
               </Button>
             </DialogFooter>

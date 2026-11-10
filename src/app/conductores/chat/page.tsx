@@ -8,12 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function ConductoresChat() {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "Sistema", text: "¡Bienvenidos al canal de ruta! Usa este chat para reportar tráfico o emergencias.", isSystem: true, time: "08:00 AM" },
-    { id: 2, sender: "Juan Pérez", text: "Ruta 5 norte libre, clima soleado. 🚚", isSystem: false, isMe: false, time: "08:15 AM", avatar: "https://i.pravatar.cc/150?u=juan" },
-    { id: 3, sender: "Miguel Ángel", text: "Cuidado en el km 40, hay un retén de policía.", isSystem: false, isMe: false, time: "09:30 AM", avatar: "https://i.pravatar.cc/150?u=miguel" },
-    { id: 4, sender: "Carlos Martínez", text: "Enterado Miguel, gracias por el aviso.", isSystem: false, isMe: true, time: "09:35 AM", avatar: "https://i.pravatar.cc/150?u=carlos" },
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +39,7 @@ export default function ConductoresChat() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm z-10 sticky top-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <Truck className="w-5 h-5" />
           </div>
           <div>
@@ -84,7 +79,7 @@ export default function ConductoresChat() {
                   )}
                   <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
                     {!msg.isMe && <span className="text-xs text-slate-500 ml-1 mb-1">{msg.sender}</span>}
-                    <div className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm ${msg.isMe ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-white text-slate-800 border border-slate-100 rounded-tl-sm'}`}>
+                    <div className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm ${msg.isMe ? 'bg-primary text-white rounded-tr-sm' : 'bg-white text-slate-800 border border-slate-100 rounded-tl-sm'}`}>
                       {msg.text}
                     </div>
                     <span className="text-[10px] text-slate-400 mt-1 mx-1">{msg.time}</span>
@@ -112,13 +107,13 @@ export default function ConductoresChat() {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Escribe un mensaje..."
-              className="pr-12 rounded-full border-slate-300 bg-slate-50 focus-visible:ring-blue-500 min-h-[44px]"
+              className="pr-12 rounded-full border-slate-300 bg-slate-50 focus-visible:ring-primary min-h-[44px]"
             />
             <Button 
               type="submit" 
               size="icon" 
               disabled={!newMessage.trim()}
-              className="absolute right-1 top-1 bottom-1 w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
+              className="absolute right-1 top-1 bottom-1 w-9 h-9 rounded-full bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors"
             >
               <Send className="w-4 h-4 ml-0.5" />
             </Button>

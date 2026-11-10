@@ -73,7 +73,7 @@ export default function ReportsPage() {
         {[
           { label: 'Ingresos Totales', value: '$28.3M', icon: DollarSign, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Gastos Operativos', value: '$18.9M', icon: TrendingDown, color: 'text-destructive', bg: 'bg-destructive/10' },
-          { label: 'Viajes Completados', value: '432', icon: Truck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Viajes Completados', value: '432', icon: Truck, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Margen de Utilidad', value: '33.2%', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-500/10' },
         ].map((stat, i) => (
           <Card key={i} className="glass-card border-none">

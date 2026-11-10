@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,8 +27,10 @@ import {
   DollarSign,
   ShieldCheck,
   ClipboardList,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import {
   Table,
@@ -47,129 +49,26 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-interface InventoryItemDetail {
-  name: string;
-  qty: number;
-  state: string;
-}
-
-interface InventoryItem {
-  id: string;
-  guideNumber: string;
-  client: string;
-  clientPhone: string;
-  clientEmail: string;
-  clientDoc: string;
-  items: string;
-  space: string;
-  entry: string;
-  exitEstimated: string;
-  status: string;
-  location: string;
-  supervisor: string;
-  monthlyRate: string;
-  insuranceValue: string;
-  inventoryDetails: InventoryItemDetail[];
-}
-
-const MOCK_INVENTORY: InventoryItem[] = [
-  { 
-    id: '1', 
-    guideNumber: 'GB-849-2024',
-    client: 'Beatriz Gómez', 
-    clientPhone: '+57 312 456 7890',
-    clientEmail: 'beatriz.gomez@email.com',
-    clientDoc: 'CC 52.849.201',
-    items: 'Menaje hogar completo', 
-    space: '12m³', 
-    entry: '2024-02-15', 
-    exitEstimated: '2024-08-15',
-    status: 'Almacenado',
-    location: 'Estante B-12 (Nivel 2)',
-    supervisor: 'Carlos Mendoza',
-    monthlyRate: '$220,000 COP',
-    insuranceValue: '$10,000,000 COP',
-    inventoryDetails: [
-      { name: 'Nevera Samsung Digital Inverter', qty: 1, state: 'Excelente, embalada' },
-      { name: 'Lavadora Whirlpool 18kg', qty: 1, state: 'Buen estado, embalada' },
-      { name: 'Sofá de 3 puestos gris', qty: 1, state: 'Excelente, con plástico burbuja' },
-      { name: 'Cajas de cartón medianas (vajilla y ropa)', qty: 8, state: 'Cerradas y rotuladas' },
-      { name: 'Mesa de comedor de vidrio + 6 sillas', qty: 1, state: 'Desarmada, vidrio protegido' }
-    ]
-  },
-  { 
-    id: '2', 
-    guideNumber: 'GB-102-2024',
-    client: 'Inversiones XYZ', 
-    clientPhone: '+57 300 987 6543',
-    clientEmail: 'contacto@inversionesxyz.com',
-    clientDoc: 'NIT 901.482.109-2',
-    items: '15 Escritorios, 20 Sillas', 
-    space: '8m³', 
-    entry: '2024-03-01', 
-    exitEstimated: '2024-06-01',
-    status: 'En Salida',
-    location: 'Sección D-04 (Muebles)',
-    supervisor: 'Diana Marcela',
-    monthlyRate: '$160,000 COP',
-    insuranceValue: '$6,000,000 COP',
-    inventoryDetails: [
-      { name: 'Escritorios de madera y metal', qty: 15, state: 'Buen estado, semi-armados' },
-      { name: 'Sillas ergonómicas de oficina', qty: 20, state: 'Usado con detalles de desgaste' },
-      { name: 'Cajoneras rodantes de 3 cajones', qty: 5, state: 'Buen estado' }
-    ]
-  },
-  { 
-    id: '3', 
-    guideNumber: 'GB-334-2024',
-    client: 'Roberto Cano', 
-    clientPhone: '+57 315 234 5678',
-    clientEmail: 'roberto.cano@hotmail.com',
-    clientDoc: 'CC 79.940.381',
-    items: 'Nevera, Lavadora, Sofá', 
-    space: '5m³', 
-    entry: '2024-01-20', 
-    exitEstimated: '2024-07-20',
-    status: 'Almacenado',
-    location: 'Estante A-05 (Nivel 1)',
-    supervisor: 'Carlos Mendoza',
-    monthlyRate: '$110,000 COP',
-    insuranceValue: '$4,500,000 COP',
-    inventoryDetails: [
-      { name: 'Nevera LG No Frost', qty: 1, state: 'Buen estado, limpia' },
-      { name: 'Lavadora LG Carga Frontal', qty: 1, state: 'Buen estado, mangueras amarradas' },
-      { name: 'Sofá cama microfibra café', qty: 1, state: 'Regular estado, cubierto' }
-    ]
-  },
-  { 
-    id: '4', 
-    guideNumber: 'GB-950-2024',
-    client: 'Logística Pro', 
-    clientPhone: '+57 310 555 0199',
-    clientEmail: 'archivo@logisticapro.co',
-    clientDoc: 'NIT 800.223.491-5',
-    items: '50 Cajas archivo muerto', 
-    space: '10m³', 
-    entry: '2024-03-10', 
-    exitEstimated: '2025-03-10',
-    status: 'Recién Ingresado',
-    location: 'Módulo C-22 (Archivo)',
-    supervisor: 'Diana Marcela',
-    monthlyRate: '$180,000 COP',
-    insuranceValue: '$2,000,000 COP',
-    inventoryDetails: [
-      { name: 'Cajas de cartón reforzado (Archivo muerto)', qty: 50, state: 'Nuevas, selladas con cinta de seguridad' }
-    ]
-  },
-];
-
+import { InventoryItem, InventoryItemDetail, getInventory, createInventoryItem } from '@/lib/warehouse';
 
 export default function WarehousePage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [inventoryList, setInventoryList] = useState<InventoryItem[]>(MOCK_INVENTORY);
+  const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
+
+  useEffect(() => {
+    async function fetchInventory() {
+      setIsLoading(true);
+      const data = await getInventory();
+      setInventoryList(data);
+      setIsLoading(false);
+    }
+    fetchInventory();
+  }, []);
 
   // New entry form states
   const [newEntry, setNewEntry] = useState({
@@ -206,66 +105,77 @@ export default function WarehousePage() {
     setNewEntryDetails(updated);
   };
 
-  const handleSaveEntry = (e: React.FormEvent) => {
+  const handleSaveEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newEntry.client || !newEntry.clientDoc || !newEntry.clientPhone || !newEntry.clientEmail) {
-      alert('Por favor complete todos los datos del depositante.');
+      toast({ title: "Atención", description: "Por favor complete todos los datos del depositante.", variant: "destructive" });
       return;
     }
 
     const validDetails = newEntryDetails.filter(d => d.name.trim() !== '');
     if (validDetails.length === 0) {
-      alert('Debe agregar al menos un artículo al inventario con descripción.');
+      toast({ title: "Atención", description: "Debe agregar al menos un artículo al inventario.", variant: "destructive" });
       return;
     }
 
-    const formattedSpace = `${newEntry.space}m³`;
-    const formattedMonthlyRate = `$${Number(newEntry.monthlyRate).toLocaleString('es-CO')} COP`;
-    const formattedInsuranceValue = `$${Number(newEntry.insuranceValue).toLocaleString('es-CO')} COP`;
-    const randomGuideNum = `GB-${Math.floor(100 + Math.random() * 900)}-${new Date().getFullYear()}`;
-    
-    const summaryItems = validDetails.map(d => `${d.qty}x ${d.name}`).join(', ');
-    const shortSummary = summaryItems.length > 35 ? summaryItems.slice(0, 35) + '...' : summaryItems;
+    setIsSaving(true);
 
-    const newItem: InventoryItem = {
-      id: String(inventoryList.length + 1),
-      guideNumber: randomGuideNum,
-      client: newEntry.client,
-      clientDoc: newEntry.clientDoc,
-      clientPhone: newEntry.clientPhone,
-      clientEmail: newEntry.clientEmail,
-      items: shortSummary,
-      space: formattedSpace,
-      entry: newEntry.entry,
-      exitEstimated: newEntry.exitEstimated,
-      status: 'Recién Ingresado',
-      location: newEntry.location,
-      supervisor: newEntry.supervisor,
-      monthlyRate: formattedMonthlyRate,
-      insuranceValue: formattedInsuranceValue,
-      inventoryDetails: validDetails
-    };
+    try {
+      const formattedSpace = `${newEntry.space}m³`;
+      const formattedMonthlyRate = `$${Number(newEntry.monthlyRate).toLocaleString('es-CO')} COP`;
+      const formattedInsuranceValue = `$${Number(newEntry.insuranceValue).toLocaleString('es-CO')} COP`;
+      const randomGuideNum = `GB-${Math.floor(100 + Math.random() * 900)}-${new Date().getFullYear()}`;
+      
+      const summaryItems = validDetails.map(d => `${d.qty}x ${d.name}`).join(', ');
+      const shortSummary = summaryItems.length > 35 ? summaryItems.slice(0, 35) + '...' : summaryItems;
 
-    setInventoryList([newItem, ...inventoryList]);
-    
-    // Reset state
-    setNewEntry({
-      client: '',
-      clientDoc: '',
-      clientPhone: '',
-      clientEmail: '',
-      location: 'Estante A-01 (Nivel 1)',
-      supervisor: 'Carlos Mendoza',
-      space: '5',
-      monthlyRate: '150000',
-      insuranceValue: '3000000',
-      entry: new Date().toISOString().split('T')[0],
-      exitEstimated: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * 6).toISOString().split('T')[0],
-    });
-    setNewEntryDetails([{ name: '', qty: 1, state: 'Excelente, embalado' }]);
-    
-    setIsEntryDialogOpen(false);
+      const newItem = await createInventoryItem({
+        guideNumber: randomGuideNum,
+        client: newEntry.client,
+        clientDoc: newEntry.clientDoc,
+        clientPhone: newEntry.clientPhone,
+        clientEmail: newEntry.clientEmail,
+        items: shortSummary,
+        space: formattedSpace,
+        entry: newEntry.entry,
+        exitEstimated: newEntry.exitEstimated,
+        status: 'Recién Ingresado',
+        location: newEntry.location,
+        supervisor: newEntry.supervisor,
+        monthlyRate: formattedMonthlyRate,
+        insuranceValue: formattedInsuranceValue,
+        inventoryDetails: validDetails
+      });
+
+      if (newItem) {
+        setInventoryList([newItem, ...inventoryList]);
+        toast({ title: "Éxito", description: "Registro guardado exitosamente." });
+        
+        // Reset state
+        setNewEntry({
+          client: '',
+          clientDoc: '',
+          clientPhone: '',
+          clientEmail: '',
+          location: 'Estante A-01 (Nivel 1)',
+          supervisor: 'Carlos Mendoza',
+          space: '5',
+          monthlyRate: '150000',
+          insuranceValue: '3000000',
+          entry: new Date().toISOString().split('T')[0],
+          exitEstimated: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * 6).toISOString().split('T')[0],
+        });
+        setNewEntryDetails([{ name: '', qty: 1, state: 'Excelente, embalado' }]);
+        
+        setIsEntryDialogOpen(false);
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Ocurrió un error al guardar", variant: "destructive" });
+    } finally {
+      setIsSaving(true);
+      setIsSaving(false);
+    }
   };
 
   const filteredInventory = inventoryList.filter(item => 
@@ -376,7 +286,20 @@ export default function WarehousePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInventory.map((item) => (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                        Cargando inventario...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredInventory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No hay registros en bodega.
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredInventory.map((item) => (
                     <TableRow key={item.id} className="hover:bg-muted/30 transition-colors border-muted/20">
                       <TableCell className="pl-6 font-medium">{item.client}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{item.items}</TableCell>
@@ -907,26 +830,19 @@ export default function WarehousePage() {
             </div>
 
             {/* Footer buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-muted/20">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsEntryDialogOpen(false)}
-                className="rounded-xl"
-              >
+            <DialogFooter className="mt-8 border-t border-muted/20 pt-6">
+              <Button type="button" variant="outline" onClick={() => setIsEntryDialogOpen(false)} disabled={isSaving} className="rounded-xl">
                 Cancelar
               </Button>
-              <Button 
-                type="submit"
-                className="rounded-xl gap-2 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90"
-              >
-                Guardar Ingreso
+              <Button type="submit" disabled={isSaving} className="rounded-xl px-8 shadow-lg shadow-primary/20">
+                {isSaving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Printer className="w-4 h-4 mr-2" />}
+                Guardar y Generar Guía
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
 
+}

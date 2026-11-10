@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,58 +20,39 @@ import {
   Briefcase, 
   Award, 
   Wallet, 
-  TrendingUp,
   Search,
   Plus,
-  MoreVertical,
   Star,
   Clock,
-  ShieldCheck,
-  AlertTriangle,
-  ChevronRight,
-  FileText
+  FileText,
+  Loader2,
+  Key
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
-// --- MOCK DATA ---
-
-const kpis = [
-  { title: "Total Plantilla", value: "45", subtitle: "Empleados activos", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
-  { title: "Nómina Mensual", value: "$124.5M", subtitle: "Proyección actual", icon: Wallet, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-  { title: "Incentivos Pagados", value: "$3.2M", subtitle: "Mes en curso", icon: Award, color: "text-amber-500", bg: "bg-amber-500/10" },
-  { title: "Auxiliares (Mes)", value: "12", subtitle: "Turnos pagados", icon: Briefcase, color: "text-purple-500", bg: "bg-purple-500/10" },
-];
-
-const empleados = [
-  { id: 1, nombre: "Carlos Rodríguez", rol: "Conductor NPR", estado: "Activo", antiguedad: "2 años", rating: 4.8 },
-  { id: 2, nombre: "María Gómez", rol: "Coordinadora Logística", estado: "Activo", antiguedad: "4 años", rating: 4.9 },
-  { id: 3, nombre: "Luis Pérez", rol: "Conductor NHR", estado: "Vacaciones", antiguedad: "1 año", rating: 4.5 },
-  { id: 4, nombre: "Ana Martínez", rol: "Auxiliar Administrativa", estado: "Incapacidad", antiguedad: "3 años", rating: 4.7 },
-];
-
-const nominas = [
-  { id: 1, periodo: "Mayo 2026 - Q1", total: "$62,250,000", estado: "Pendiente", fecha: "15 Mayo 2026" },
-  { id: 2, periodo: "Abril 2026 - Q2", total: "$61,800,000", estado: "Pagado", fecha: "30 Abril 2026" },
-  { id: 3, periodo: "Abril 2026 - Q1", total: "$62,000,000", estado: "Pagado", fecha: "15 Abril 2026" },
-];
-
-const incentivos = [
-  { id: 1, conductor: "Carlos Rodríguez", motivo: "Cero Accidentes (Mes)", monto: "$150,000", fecha: "01 Mayo 2026", estado: "Pagado" },
-  { id: 2, conductor: "Luis Pérez", motivo: "Entregas a Tiempo (100%)", monto: "$100,000", fecha: "01 Mayo 2026", estado: "Aprobado" },
-  { id: 3, conductor: "Jorge Silva", motivo: "Ahorro Combustible", monto: "$80,000", fecha: "15 Abr 2026", estado: "Pagado" },
-];
-
-const auxiliares = [
-  { id: 1, nombre: "Pedro Sánchez", servicio: "Mudanza Bogotá - Norte", pago: "$60,000", fecha: "05 Mayo 2026", estado: "Pagado" },
-  { id: 2, nombre: "Juan Díaz", servicio: "Cargue Bodega Principal", pago: "$45,000", fecha: "06 Mayo 2026", estado: "Pendiente" },
-  { id: 3, nombre: "Andrés Ruiz", servicio: "Descargue Express", pago: "$50,000", fecha: "06 Mayo 2026", estado: "Pendiente" },
-];
-
-// --- COMPONENTS ---
+import { getStaff, createStaffMember, StaffMember } from '@/lib/staff';
+import { createUser } from '@/lib/users';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PersonalDashboard() {
   const [activeTab, setActiveTab] = useState('plantilla');
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    role: 'Conductor NPR',
+    status: 'Activo',
+    phone: '',
+    document_id: ''
+  });
+
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isGeneratingCreds, setIsGeneratingCreds] = useState(false);
+  const [generatedCreds, setGeneratedCreds] = useState<{email: string, password: string} | null>(null);
+
+  const { toast } = useToast();
 
   const tabs = [
     { id: 'plantilla', label: 'Plantilla', icon: Users },
@@ -79,6 +60,91 @@ export default function PersonalDashboard() {
     { id: 'incentivos', label: 'Incentivos', icon: Award },
     { id: 'auxiliares', label: 'Auxiliares', icon: Briefcase },
   ];
+
+  const fetchStaff = async () => {
+    setLoading(true);
+    try {
+      const data = await getStaff();
+      setStaff(data);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "No se pudo cargar el personal", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  const handleAddStaff = async () => {
+    if (!newStaff.name || !newStaff.document_id) return;
+
+    try {
+      await createStaffMember({
+        name: newStaff.name,
+        role: newStaff.role,
+        status: newStaff.status,
+        phone: newStaff.phone,
+        document_id: newStaff.document_id
+      });
+      toast({ title: "Empleado agregado", description: "El registro se guardó correctamente." });
+      setIsDialogOpen(false);
+      setNewStaff({ name: '', role: 'Conductor NPR', status: 'Activo', phone: '', document_id: '' });
+      fetchStaff();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo guardar el registro.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenDetails = (emp: StaffMember) => {
+    setSelectedStaff(emp);
+    setGeneratedCreds(null);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleGenerateCredentials = async () => {
+    if (!selectedStaff) return;
+    setIsGeneratingCreds(true);
+    try {
+      const names = selectedStaff.name.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
+      const email = names.length > 1 
+        ? `${names[0]}.${names[1]}@transmudanzas.com` 
+        : `${names[0]}@transmudanzas.com`;
+      
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$*';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      let systemRole: 'ayudante' | 'conductor' | 'administrador' | 'contador' = 'ayudante';
+      const r = selectedStaff.role.toLowerCase();
+      if (r.includes('conductor')) systemRole = 'conductor';
+      else if (r.includes('admin') || r.includes('coord')) systemRole = 'administrador';
+      else if (r.includes('conta')) systemRole = 'contador';
+
+      const { createSystemUserAction } = await import('@/app/actions/auth');
+      const result = await createSystemUserAction({
+        name: selectedStaff.name,
+        email: email,
+        password_raw: password,
+        role: systemRole,
+        status: 'Activo'
+      });
+
+      if (!result.success) throw new Error(result.error);
+
+      setGeneratedCreds({ email, password });
+      toast({ title: "Credenciales Creadas", description: "El usuario ya puede acceder al sistema." });
+
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "No se pudieron generar las credenciales.", variant: "destructive" });
+    } finally {
+      setIsGeneratingCreds(false);
+    }
+  };
 
   return (
     <div className="min-h-screen px-4 pb-24 pt-8 md:pl-[140px] md:pr-8 md:py-8 bg-background max-w-[100vw] overflow-x-hidden">
@@ -90,7 +156,7 @@ export default function PersonalDashboard() {
           <p className="text-muted-foreground">Gestión de personal, nóminas, incentivos y colaboradores externos.</p>
         </div>
         <div className="flex gap-2">
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl gap-2 shadow-lg shadow-primary/20">
                 <Plus size={16} /> Agregar Personal
@@ -106,20 +172,56 @@ export default function PersonalDashboard() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="empName" className="text-right">Nombre</Label>
-                  <Input id="empName" placeholder="Ej. Juan Pérez" className="col-span-3" />
+                  <Input 
+                    id="empName" 
+                    placeholder="Ej. Juan Pérez" 
+                    className="col-span-3"
+                    value={newStaff.name}
+                    onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="empDoc" className="text-right">Cédula</Label>
+                  <Input 
+                    id="empDoc" 
+                    placeholder="Documento de identidad" 
+                    className="col-span-3"
+                    value={newStaff.document_id}
+                    onChange={(e) => setNewStaff({...newStaff, document_id: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="empPhone" className="text-right">Teléfono</Label>
+                  <Input 
+                    id="empPhone" 
+                    placeholder="Número de celular" 
+                    className="col-span-3"
+                    value={newStaff.phone}
+                    onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="empRole" className="text-right">Cargo</Label>
-                  <select id="empRole" className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <select 
+                    id="empRole" 
+                    className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={newStaff.role}
+                    onChange={(e) => setNewStaff({...newStaff, role: e.target.value})}
+                  >
                     <option value="Conductor NPR">Conductor NPR</option>
                     <option value="Conductor NHR">Conductor NHR</option>
-                    <option value="Coordinador">Coordinador Logístico</option>
-                    <option value="Auxiliar">Auxiliar Administrativo</option>
+                    <option value="Coordinador Logístico">Coordinador Logístico</option>
+                    <option value="Auxiliar Administrativo">Auxiliar Administrativo</option>
                   </select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="empStatus" className="text-right">Estado</Label>
-                  <select id="empStatus" className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <select 
+                    id="empStatus" 
+                    className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={newStaff.status}
+                    onChange={(e) => setNewStaff({...newStaff, status: e.target.value})}
+                  >
                     <option value="Activo">Activo</option>
                     <option value="Incapacidad">Incapacidad</option>
                     <option value="Vacaciones">Vacaciones</option>
@@ -127,41 +229,74 @@ export default function PersonalDashboard() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Guardar Empleado</Button>
+                <Button type="button" onClick={handleAddStaff} disabled={!newStaff.name || !newStaff.document_id}>Guardar Empleado</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </header>
 
-      {/* KPIs */}
+      {/* KPIs vacíos - a conectar en el futuro con cálculos reales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card className="glass-card hover:shadow-xl transition-all duration-300 border-white/20 dark:border-white/10 h-full">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={cn("p-3 rounded-xl", kpi.bg, kpi.color)}>
-                      <Icon size={24} />
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-muted-foreground text-sm font-medium mb-1">{kpi.title}</h3>
-                    <p className="text-3xl font-bold text-foreground mb-1">{kpi.value}</p>
-                    <p className="text-xs text-muted-foreground">{kpi.subtitle}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
+        <Card className="glass-card border-white/20 dark:border-white/10 h-full">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                <Users size={24} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-muted-foreground text-sm font-medium mb-1">Total Plantilla</h3>
+              <p className="text-3xl font-bold text-foreground mb-1">{staff.length}</p>
+              <p className="text-xs text-muted-foreground">Empleados registrados</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="glass-card border-white/20 dark:border-white/10 h-full">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Wallet size={24} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-muted-foreground text-sm font-medium mb-1">Nómina Mensual</h3>
+              <p className="text-3xl font-bold text-foreground mb-1">$0</p>
+              <p className="text-xs text-muted-foreground">Proyección actual</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card border-white/20 dark:border-white/10 h-full">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                <Award size={24} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-muted-foreground text-sm font-medium mb-1">Incentivos Pagados</h3>
+              <p className="text-3xl font-bold text-foreground mb-1">$0</p>
+              <p className="text-xs text-muted-foreground">Mes en curso</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card border-white/20 dark:border-white/10 h-full">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500">
+                <Briefcase size={24} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-muted-foreground text-sm font-medium mb-1">Auxiliares (Mes)</h3>
+              <p className="text-3xl font-bold text-foreground mb-1">0</p>
+              <p className="text-xs text-muted-foreground">Turnos pagados</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
@@ -206,41 +341,47 @@ export default function PersonalDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                   <Input placeholder="Buscar empleado..." className="pl-10 rounded-xl bg-background/50 backdrop-blur-sm border-white/20" />
                 </div>
-                <Button variant="outline" className="rounded-xl">Filtros</Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {empleados.map(emp => (
-                  <Card key={emp.id} className="glass-card hover:border-primary/30 transition-colors cursor-pointer group">
-                    <CardContent className="p-5">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-white font-bold text-lg shadow-md">
-                          {emp.nombre.charAt(0)}
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">Cargando plantilla...</div>
+              ) : staff.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">No hay empleados registrados.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {staff.map(emp => (
+                    <Card 
+                      key={emp.id} 
+                      className="glass-card hover:border-primary/30 transition-colors cursor-pointer group"
+                      onClick={() => handleOpenDetails(emp)}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-white font-bold text-lg shadow-md">
+                            {emp.name.charAt(0)}
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-1 rounded-full uppercase",
+                            emp.status === 'Activo' ? "bg-green-500/10 text-green-500" :
+                            emp.status === 'Vacaciones' ? "bg-primary/10 text-primary" :
+                            "bg-amber-500/10 text-amber-500"
+                          )}>
+                            {emp.status}
+                          </span>
                         </div>
-                        <span className={cn(
-                          "text-[10px] font-bold px-2 py-1 rounded-full uppercase",
-                          emp.estado === 'Activo' ? "bg-green-500/10 text-green-500" :
-                          emp.estado === 'Vacaciones' ? "bg-blue-500/10 text-blue-500" :
-                          "bg-amber-500/10 text-amber-500"
-                        )}>
-                          {emp.estado}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-lg truncate" title={emp.nombre}>{emp.nombre}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">{emp.rol}</p>
-                      
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 border-t border-white/10">
-                        <div className="flex items-center gap-1">
-                          <Clock size={14} /> {emp.antiguedad}
+                        <h3 className="font-bold text-lg truncate" title={emp.name}>{emp.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{emp.role}</p>
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 border-t border-white/10">
+                          <div className="flex items-center gap-1">
+                            CC: {emp.document_id}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 text-amber-500">
-                          <Star size={14} className="fill-amber-500" /> {emp.rating}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -258,38 +399,8 @@ export default function PersonalDashboard() {
                   <CardTitle className="text-xl">Historial de Nóminas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {nominas.map(nom => (
-                      <div key={nom.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-white/10 bg-background/50 hover:bg-muted/30 transition-colors gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                            nom.estado === 'Pagado' ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"
-                          )}>
-                            <FileText size={18} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold">{nom.periodo}</h4>
-                            <p className="text-sm text-muted-foreground">Fecha de pago: {nom.fecha}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
-                          <div className="text-left sm:text-right">
-                            <p className="text-sm text-muted-foreground mb-1">Total</p>
-                            <p className="font-bold text-lg">{nom.total}</p>
-                          </div>
-                          <span className={cn(
-                            "px-3 py-1 text-xs font-bold rounded-full",
-                            nom.estado === 'Pagado' ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"
-                          )}>
-                            {nom.estado}
-                          </span>
-                          <Button variant="ghost" size="icon" className="hidden sm:flex">
-                            <ChevronRight size={18} />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="text-center py-12 text-muted-foreground">
+                    Aún no hay nóminas registradas.
                   </div>
                 </CardContent>
               </Card>
@@ -305,64 +416,16 @@ export default function PersonalDashboard() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="grid lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  <Card className="glass-card">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xl">Últimos Incentivos Asignados</CardTitle>
-                      <Button variant="outline" size="sm" className="rounded-xl">Ver Todos</Button>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4 mt-4">
-                        {incentivos.map(inc => (
-                          <div key={inc.id} className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-background/50">
-                            <div>
-                              <h4 className="font-bold">{inc.conductor}</h4>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <Award size={14} className="text-amber-500" /> {inc.motivo}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-green-500 text-lg">+{inc.monto}</p>
-                              <p className="text-xs text-muted-foreground">{inc.fecha}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="space-y-6">
-                  <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-background border-amber-500/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Star className="text-amber-500" /> Sistema de Puntos
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Los conductores ganan puntos por entregas perfectas, puntualidad y cero reportes.
-                      </p>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-background/60">
-                          <span className="text-sm font-medium">Entrega a tiempo</span>
-                          <span className="text-amber-500 font-bold">+50 pts</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-background/60">
-                          <span className="text-sm font-medium">Cero Accidentes (Mes)</span>
-                          <span className="text-amber-500 font-bold">+500 pts</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-background/60">
-                          <span className="text-sm font-medium">Ahorro Combustible</span>
-                          <span className="text-amber-500 font-bold">+200 pts</span>
-                        </div>
-                      </div>
-                      <Button className="w-full mt-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white">Configurar Reglas</Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-xl">Incentivos Asignados</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    Aún no hay incentivos asignados a conductores.
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
@@ -381,49 +444,8 @@ export default function PersonalDashboard() {
                   <Button size="sm" className="rounded-xl gap-2"><Plus size={16} /> Registrar Pago</Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full mt-4">
-                      <thead>
-                        <tr className="border-b border-white/10 text-left text-sm text-muted-foreground">
-                          <th className="pb-3 font-medium">Nombre / C.C.</th>
-                          <th className="pb-3 font-medium">Servicio</th>
-                          <th className="pb-3 font-medium">Fecha</th>
-                          <th className="pb-3 font-medium text-right">Monto</th>
-                          <th className="pb-3 font-medium text-center">Estado</th>
-                          <th className="pb-3"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {auxiliares.map(aux => (
-                          <tr key={aux.id} className="hover:bg-muted/20 transition-colors">
-                            <td className="py-4">
-                              <div className="font-medium flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center font-bold text-xs">
-                                  {aux.nombre.charAt(0)}
-                                </div>
-                                {aux.nombre}
-                              </div>
-                            </td>
-                            <td className="py-4 text-sm text-muted-foreground">{aux.servicio}</td>
-                            <td className="py-4 text-sm text-muted-foreground">{aux.fecha}</td>
-                            <td className="py-4 text-right font-bold">{aux.pago}</td>
-                            <td className="py-4 text-center">
-                              <span className={cn(
-                                "text-[10px] font-bold px-2 py-1 rounded-full",
-                                aux.estado === 'Pagado' ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"
-                              )}>
-                                {aux.estado}
-                              </span>
-                            </td>
-                            <td className="py-4 text-right">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                <MoreVertical size={16} />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="text-center py-12 text-muted-foreground">
+                    No hay registros de pagos a auxiliares.
                   </div>
                 </CardContent>
               </Card>
@@ -431,6 +453,74 @@ export default function PersonalDashboard() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Empleado</DialogTitle>
+          </DialogHeader>
+          
+          {selectedStaff && (
+            <div className="py-4 space-y-4">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-2xl">
+                  {selectedStaff.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl">{selectedStaff.name}</h3>
+                  <p className="text-muted-foreground text-sm">{selectedStaff.role}</p>
+                </div>
+              </div>
+              
+              <div className="bg-muted p-4 rounded-xl space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Documento:</span>
+                  <span className="font-medium">{selectedStaff.document_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Teléfono:</span>
+                  <span className="font-medium">{selectedStaff.phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Estado:</span>
+                  <span className="font-medium">{selectedStaff.status}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <h4 className="font-bold text-sm mb-3">Acceso al Sistema</h4>
+                {generatedCreds ? (
+                  <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-xl space-y-2">
+                    <p className="text-xs text-green-700 font-bold mb-2">¡Credenciales Generadas Exitosamente!</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-bold select-all">{generatedCreds.email}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Contraseña:</span>
+                      <span className="font-bold select-all">{generatedCreds.password}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">Copia estos datos y entrégaselos al empleado.</p>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={handleGenerateCredentials} 
+                    disabled={isGeneratingCreds}
+                    className="w-full rounded-xl gap-2 shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white"
+                  >
+                    {isGeneratingCreds ? <Loader2 className="animate-spin" size={16} /> : <Key size={16} />}
+                    Generar Credenciales Automáticas
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailModalOpen(false)} className="rounded-xl w-full">Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

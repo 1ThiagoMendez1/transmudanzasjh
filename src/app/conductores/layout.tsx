@@ -36,24 +36,24 @@ export default function ConductoresLayout({
               <Link
                 key={item.path}
                 href={item.path}
-                className="relative flex flex-col items-center justify-center w-full h-full space-y-1 text-slate-500 hover:text-blue-600 transition-colors"
+                className="relative flex flex-col items-center justify-center w-full h-full space-y-1 text-slate-500 hover:text-primary transition-colors"
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeTabIndicator"
-                    className="absolute -top-[1px] w-12 h-1 bg-blue-600 rounded-b-full"
+                    className="absolute -top-[1px] w-12 h-1 bg-primary rounded-b-full"
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
                 <item.icon
                   className={`w-6 h-6 transition-transform ${
-                    isActive ? "text-blue-600 scale-110" : "text-slate-400"
+                    isActive ? "text-primary scale-110" : "text-slate-400"
                   }`}
                 />
                 <span
                   className={`text-[10px] font-medium ${
-                    isActive ? "text-blue-600" : "text-slate-400"
+                    isActive ? "text-primary" : "text-slate-400"
                   }`}
                 >
                   {item.label}

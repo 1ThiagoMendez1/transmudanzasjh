@@ -16,13 +16,14 @@ export default function RequestQuotePage() {
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [result, setResult] = useState<{ id: string, secretCode: string } | null>(null);
+  const [result, setResult] = useState<{ id: string, clientDocument: string } | null>(null);
 
   const [formData, setFormData] = useState({
     origin: '',
     destination: '',
     estimatedDate: '',
     clientName: '',
+    clientDocument: '',
     clientPhone: '',
     description: '',
   });
@@ -31,7 +32,7 @@ export default function RequestQuotePage() {
   const prevStep = () => setStep(s => s - 1);
 
   const handleSubmit = async () => {
-    if (!formData.origin || !formData.destination || !formData.description || !formData.clientName) {
+    if (!formData.origin || !formData.destination || !formData.description || !formData.clientName || !formData.clientDocument) {
       toast({
         variant: "destructive",
         title: "Campos incompletos",
@@ -47,6 +48,7 @@ export default function RequestQuotePage() {
         destination: formData.destination,
         estimatedDate: formData.estimatedDate,
         clientName: formData.clientName,
+        clientDocument: formData.clientDocument,
         clientPhone: formData.clientPhone,
         description: formData.description,
         photos: [] // mock photos
@@ -86,7 +88,7 @@ export default function RequestQuotePage() {
       {/* Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full" />
       </div>
 
       <div className="w-full max-w-2xl relative z-10">
@@ -183,6 +185,15 @@ export default function RequestQuotePage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>Documento de Identidad</Label>
+                    <Input 
+                      placeholder="Ej: 1010123456" 
+                      className="rounded-xl h-12 bg-white/50 dark:bg-black/20"
+                      value={formData.clientDocument}
+                      onChange={e => setFormData({...formData, clientDocument: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Teléfono / WhatsApp</Label>
                     <Input 
                       type="tel"
@@ -201,7 +212,7 @@ export default function RequestQuotePage() {
                   <Button 
                     className="flex-1 h-12 rounded-xl text-lg gap-2" 
                     onClick={nextStep}
-                    disabled={!formData.clientName}
+                    disabled={!formData.clientName || !formData.clientDocument}
                   >
                     Continuar <ArrowRight size={20} />
                   </Button>
@@ -303,17 +314,7 @@ export default function RequestQuotePage() {
                     </div>
                   </div>
 
-                  <div className="bg-orange-500/10 p-4 rounded-xl border border-orange-500/20">
-                    <p className="text-xs font-bold uppercase text-orange-600 mb-1 flex items-center gap-1">
-                      Código Secreto <span className="text-[10px] bg-orange-500/20 px-2 py-0.5 rounded-full">No lo compartas</span>
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold tracking-[0.2em] text-foreground">{result.secretCode}</p>
-                      <button onClick={() => copyToClipboard(result.secretCode, 'code')} className="text-muted-foreground hover:text-orange-500 transition-colors">
-                        {copiedCode ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                      </button>
-                    </div>
-                  </div>
+
                 </div>
 
                 <p className="text-sm text-muted-foreground mt-4">

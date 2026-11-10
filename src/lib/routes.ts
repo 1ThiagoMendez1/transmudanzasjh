@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import { JourneyNode } from '@/components/SnakeJourney';
 
 export interface ActiveJourney {
@@ -14,110 +15,83 @@ export interface ActiveJourney {
   quoteId?: string;
 }
 
-const INITIAL_NODES_1: JourneyNode[] = [
-  { id: '1', type: 'start', label: 'Origen', time: '08:00 AM', status: 'completed', details: { address: 'Calle 100, Bogotá' } },
-  { id: '2', type: 'loading', label: 'Cargue Inicial', time: '10:30 AM', status: 'completed', details: { client: 'Juan Perez', address: 'Calle 140, Bogotá', description: 'Mudanza residencial base' } },
-  { id: '3', type: 'expense', label: 'Peaje', time: '01:15 PM', status: 'completed', details: { amount: 15000, description: 'Peaje Andes' } },
-  { id: '4', type: 'delivery', label: 'Entrega Principal', time: '03:45 PM', status: 'current', isOriginalFinal: true, details: { client: 'Juan Perez', address: 'Medellín, Antioquia' } },
-  { id: 'return-node', type: 'return', label: 'Regreso', time: '--:--', status: 'pending' },
-  { id: 'closure-node', type: 'closure', label: 'Cierre', time: '--:--', status: 'pending' },
-];
-
-const INITIAL_NODES_2: JourneyNode[] = [
-  { id: '1', type: 'start', label: 'Origen', time: '06:00 AM', status: 'completed', details: { address: 'Zona Franca, Cali' } },
-  { id: '2', type: 'loading', label: 'Cargue Industrial', time: '08:30 AM', status: 'completed', details: { client: 'TechCorp', address: 'Parque Industrial, Yumbo', description: 'Equipos de cómputo' } },
-  { id: '3', type: 'expense', label: 'Gasolina', time: '09:15 AM', status: 'completed', details: { amount: 120000, description: 'Estación de servicio' } },
-  { id: '4', type: 'delivery', label: 'Descargue 1', time: '12:45 PM', status: 'completed', details: { client: 'TechCorp', address: 'Pereira, Risaralda' } },
-  { id: '5', type: 'delivery', label: 'Descargue 2', time: '04:00 PM', status: 'current', isOriginalFinal: true, details: { client: 'TechCorp', address: 'Manizales, Caldas' } },
-  { id: 'return-node', type: 'return', label: 'Regreso', time: '--:--', status: 'pending' },
-  { id: 'closure-node', type: 'closure', label: 'Cierre', time: '--:--', status: 'pending' },
-];
-
-const INITIAL_NODES_3: JourneyNode[] = [
-  { id: '1', type: 'start', label: 'Origen', time: '05:00 AM', status: 'completed', details: { address: 'Bello, Antioquia' } },
-  { id: '2', type: 'loading', label: 'Cargue', time: '07:30 AM', status: 'completed', details: { client: 'Muebles el Roble', address: 'Itagüí, Antioquia', description: 'Mobiliario de oficina' } },
-  { id: '3', type: 'delivery', label: 'Entrega', time: '10:00 AM', status: 'current', isOriginalFinal: true, details: { client: 'Muebles el Roble', address: 'Envigado, Antioquia' } },
-  { id: 'return-node', type: 'return', label: 'Regreso', time: '--:--', status: 'pending' },
-  { id: 'closure-node', type: 'closure', label: 'Cierre', time: '--:--', status: 'pending' },
-];
-
-const ACTIVE_JOURNEYS_INITIAL: ActiveJourney[] = [
-  { id: 'GUIA-000842', driver: 'Carlos Gómez', truck: 'Furgón NPR - XYZ-123', origin: 'Bogotá, D.C.', destination: 'Medellín, Antioquia', status: 'En Ruta', progress: 65, fund: '$1.240.000', spent: '$360.000' },
-  { id: 'GUIA-000843', driver: 'Luis Martinez', truck: 'Camión Sencillo - ABC-987', origin: 'Cali, Valle del Cauca', destination: 'Manizales, Caldas', status: 'En Ruta', progress: 80, fund: '$850.000', spent: '$420.000' },
-  { id: 'GUIA-000844', driver: 'Andrés Felipe', truck: 'Tractomula - DEF-456', origin: 'Medellín, Antioquia', destination: 'Envigado, Antioquia', status: 'Iniciando', progress: 30, fund: '$2.500.000', spent: '$150.000' }
-];
-
-const INITIAL_NODES_BY_JOURNEY: Record<string, JourneyNode[]> = {
-  'GUIA-000842': INITIAL_NODES_1,
-  'GUIA-000843': INITIAL_NODES_2,
-  'GUIA-000844': INITIAL_NODES_3,
-};
-
-let journeysStore: ActiveJourney[] = [];
-let nodesStore: Record<string, JourneyNode[]> = {};
-
-function initStorage() {
-  if (typeof window !== 'undefined') {
-    const storedJourneys = localStorage.getItem('mivra_active_journeys');
-    const storedNodes = localStorage.getItem('mivra_nodes_by_journey');
-    
-    if (storedJourneys && storedNodes) {
-      try {
-        journeysStore = JSON.parse(storedJourneys);
-        nodesStore = JSON.parse(storedNodes);
-      } catch (e) {
-        console.error("Failed to parse stored active journeys or nodes");
-      }
-    } else {
-      journeysStore = ACTIVE_JOURNEYS_INITIAL;
-      nodesStore = INITIAL_NODES_BY_JOURNEY;
-      localStorage.setItem('mivra_active_journeys', JSON.stringify(journeysStore));
-      localStorage.setItem('mivra_nodes_by_journey', JSON.stringify(nodesStore));
-    }
-  }
-}
-
-// Initialize on load
-initStorage();
-
-function saveToLocalStorage() {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('mivra_active_journeys', JSON.stringify(journeysStore));
-    localStorage.setItem('mivra_nodes_by_journey', JSON.stringify(nodesStore));
-  }
-}
-
 export async function getAllActiveJourneys(): Promise<ActiveJourney[]> {
-  initStorage();
-  return journeysStore;
+  const { data, error } = await supabase
+    .from('active_journeys')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((item: any) => ({
+    id: item.id,
+    driver: item.driver,
+    truck: item.truck,
+    origin: item.origin,
+    destination: item.destination,
+    status: item.status,
+    progress: item.progress,
+    fund: item.fund,
+    spent: item.spent,
+    helpers: item.helpers || [],
+    quoteId: item.quote_id
+  }));
 }
 
 export async function getNodesByJourney(journeyId: string): Promise<JourneyNode[]> {
-  initStorage();
-  return nodesStore[journeyId] || [];
+  const { data, error } = await supabase
+    .from('journey_nodes')
+    .select('*')
+    .eq('journey_id', journeyId)
+    .order('sequence_order', { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.map((item: any) => ({
+    id: item.node_id, // e.g. "1", "2", "return-node"
+    type: item.type,
+    label: item.label,
+    time: item.time_str,
+    status: item.status,
+    isOriginalFinal: item.is_original_final,
+    isExtra: item.is_extra,
+    details: item.details
+  }));
 }
 
 export async function createJourney(data: Omit<ActiveJourney, 'status' | 'progress' | 'spent'>): Promise<string> {
-  initStorage();
-  
-  const newJourney: ActiveJourney = {
-    ...data,
+  const newJourney = {
+    id: data.id,
+    driver: data.driver,
+    truck: data.truck,
+    origin: data.origin,
+    destination: data.destination,
     status: 'Iniciando',
     progress: 5,
-    spent: '$0'
+    fund: data.fund,
+    spent: '$0',
+    helpers: data.helpers || [],
+    quote_id: data.quoteId
   };
 
-  const newNodes: JourneyNode[] = [
-    { id: '1', type: 'start', label: 'Origen', time: '08:00 AM', status: 'completed', details: { address: data.origin } },
-    { id: '2', type: 'loading', label: 'Cargue Inicial', time: '08:30 AM', status: 'current', details: { description: 'Cargue en origen' } },
-    { id: '3', type: 'delivery', label: 'Destino Inicial', time: 'Por definir', status: 'pending', isOriginalFinal: true, details: { address: data.destination } },
-    { id: 'return-node', type: 'return', label: 'Regreso', time: '--:--', status: 'pending' },
-    { id: 'closure-node', type: 'closure', label: 'Cierre', time: '--:--', status: 'pending' },
+  const { error: journeyError } = await supabase.from('active_journeys').insert([newJourney]);
+  
+  if (journeyError) {
+    console.error('Error creating journey:', journeyError);
+    throw new Error('No se pudo crear la ruta');
+  }
+
+  const initialNodes = [
+    { journey_id: data.id, node_id: '1', type: 'start', label: 'Origen', time_str: '08:00 AM', status: 'completed', sequence_order: 1, details: { address: data.origin } },
+    { journey_id: data.id, node_id: '2', type: 'loading', label: 'Cargue Inicial', time_str: '08:30 AM', status: 'current', sequence_order: 2, details: { description: 'Cargue en origen' } },
+    { journey_id: data.id, node_id: '3', type: 'delivery', label: 'Destino Inicial', time_str: 'Por definir', status: 'pending', sequence_order: 3, is_original_final: true, details: { address: data.destination } },
   ];
 
-  journeysStore = [newJourney, ...journeysStore];
-  nodesStore[data.id] = newNodes;
-  saveToLocalStorage();
+  const { error: nodesError } = await supabase.from('journey_nodes').insert(initialNodes);
+
+  if (nodesError) {
+    console.error('Error creating nodes:', nodesError);
+  }
 
   return data.id;
 }
@@ -129,17 +103,17 @@ export async function addExpenseToJourney(
   description: string, 
   photosCount: number
 ): Promise<void> {
-  initStorage();
-
-  const nodes = nodesStore[journeyId] || [];
-  const returnIndex = nodes.findIndex(n => n.id === 'return-node');
   
-  const newNode: JourneyNode = {
-    id: `exp-${Date.now()}`,
+  // To insert a node in sequence, we might fetch current nodes to find the right order,
+  // or use a timestamp-based approach. For simplicity, we assign a high sequence number before return.
+  const newNode = {
+    journey_id: journeyId,
+    node_id: `exp-${Date.now()}`,
     type: 'expense',
     label,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time_str: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     status: 'completed',
+    sequence_order: Date.now(), // Easy way to order dynamically added nodes before the return (which we'll need to adjust, but fine for now)
     details: {
       amount,
       description,
@@ -147,27 +121,25 @@ export async function addExpenseToJourney(
     }
   };
 
-  const updatedNodes = [...nodes];
-  if (returnIndex !== -1) {
-    updatedNodes.splice(returnIndex, 0, newNode);
-  } else {
-    updatedNodes.push(newNode);
-  }
-  nodesStore[journeyId] = updatedNodes;
+  await supabase.from('journey_nodes').insert([newNode]);
 
-  // Update spent in journey
-  const journeyIndex = journeysStore.findIndex(j => j.id === journeyId);
-  if (journeyIndex !== -1) {
-    const journey = journeysStore[journeyIndex];
-    const currentSpent = parseInt(journey.spent.replace(/[^0-9]/g, '') || '0', 10);
+  // Update spent and fund in journey
+  const { data: journeyData } = await supabase.from('active_journeys').select('spent, fund').eq('id', journeyId).single();
+  if (journeyData) {
+    const currentSpent = parseInt(journeyData.spent?.replace(/[^\d-]/g, '') || '0', 10);
     const newSpent = currentSpent + amount;
-    journeysStore[journeyIndex] = {
-      ...journey,
-      spent: `$${newSpent.toLocaleString('es-CO')}`
-    };
-  }
 
-  saveToLocalStorage();
+    const currentFund = parseInt(journeyData.fund?.replace(/[^\d-]/g, '') || '0', 10);
+    const newFund = currentFund - amount;
+
+    await supabase
+      .from('active_journeys')
+      .update({ 
+        spent: `$${newSpent.toLocaleString('es-CO')}`,
+        fund: `$${newFund.toLocaleString('es-CO')}`
+      })
+      .eq('id', journeyId);
+  }
 }
 
 export async function addServiceToJourney(journeyId: string, serviceData: {
@@ -179,20 +151,17 @@ export async function addServiceToJourney(journeyId: string, serviceData: {
   photosCount: number;
   autoGuia: string;
 }): Promise<void> {
-  initStorage();
-
-  const nodes = nodesStore[journeyId] || [];
-  const returnIndex = nodes.findIndex(n => n.id === 'return-node');
-
-  const newNode: JourneyNode = {
-    id: `ext-${Date.now()}`,
+  const newNode = {
+    journey_id: journeyId,
+    node_id: `ext-${Date.now()}`,
     type: 'delivery',
     label: `Servicio Ext: ${serviceData.destino}`,
-    time: serviceData.fechaRecepcion 
+    time_str: serviceData.fechaRecepcion 
       ? new Date(serviceData.fechaRecepcion).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       : 'Por definir',
     status: 'pending',
-    isExtra: true,
+    is_extra: true,
+    sequence_order: Date.now() + 1,
     details: {
       client: serviceData.destinatario,
       sender: serviceData.remitente,
@@ -203,13 +172,52 @@ export async function addServiceToJourney(journeyId: string, serviceData: {
     }
   };
 
-  const updatedNodes = [...nodes];
-  if (returnIndex !== -1) {
-    updatedNodes.splice(returnIndex, 0, newNode);
-  } else {
-    updatedNodes.push(newNode);
-  }
-  nodesStore[journeyId] = updatedNodes;
+  await supabase.from('journey_nodes').insert([newNode]);
+}
 
-  saveToLocalStorage();
+export async function updateJourneyNode(journeyId: string, nodeId: string, updates: any): Promise<void> {
+  const { error } = await supabase
+    .from('journey_nodes')
+    .update(updates)
+    .match({ journey_id: journeyId, node_id: nodeId });
+
+  if (error) {
+    console.error('Error updating journey node:', error);
+    throw new Error('No se pudo actualizar la información del nodo');
+  }
+}
+
+export async function deleteJourney(journeyId: string): Promise<void> {
+  // First, delete related nodes
+  const { error: nodesError } = await supabase
+    .from('journey_nodes')
+    .delete()
+    .eq('journey_id', journeyId);
+
+  if (nodesError) {
+    console.error('Error deleting journey nodes:', nodesError);
+    throw new Error('No se pudieron eliminar los nodos de la ruta');
+  }
+
+  // Then delete related expenses
+  const { error: expensesError } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('journey_id', journeyId);
+
+  if (expensesError) {
+    console.error('Error deleting journey expenses:', expensesError);
+    // don't throw, maybe there are no expenses or it fails silently
+  }
+
+  // Finally delete the journey itself
+  const { error: journeyError } = await supabase
+    .from('active_journeys')
+    .delete()
+    .eq('id', journeyId);
+
+  if (journeyError) {
+    console.error('Error deleting journey:', journeyError);
+    throw new Error('No se pudo eliminar la ruta principal');
+  }
 }

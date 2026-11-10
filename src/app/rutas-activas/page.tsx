@@ -28,7 +28,8 @@ import {
   Plus,
   Camera,
   Image as ImageIcon,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -41,8 +42,13 @@ import {
   getNodesByJourney, 
   createJourney, 
   addExpenseToJourney, 
-  addServiceToJourney 
+  addServiceToJourney,
+  updateJourneyNode,
+  deleteJourney
 } from '@/lib/routes';
+import { getStaff, StaffMember } from '@/lib/staff';
+import { getFleet, FleetVehicle } from '@/lib/fleet';
+import { supabase } from '@/lib/supabase';
 
 export default function RutasActivas() {
   const [activeJourneys, setActiveJourneys] = useState<ActiveJourney[]>([]);
@@ -52,34 +58,36 @@ export default function RutasActivas() {
   const [selectedJourneyId, setSelectedJourneyId] = useState('');
   const [activeNode, setActiveNode] = useState<JourneyNode | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeDrivers, setActiveDrivers] = useState<StaffMember[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<FleetVehicle[]>([]);
   
   // Modals
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isNewRouteOpen, setIsNewRouteOpen] = useState(false);
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isEditNodeOpen, setIsEditNodeOpen] = useState(false);
+  const [editNodeData, setEditNodeData] = useState<any>({});
+  const [isEditingNode, setIsEditingNode] = useState(false);
+  const [isDeleteJourneyOpen, setIsDeleteJourneyOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [autoGuia, setAutoGuia] = useState('');
 
   useEffect(() => {
     getAllWebQuotes().then(quotes => {
-      let accepted = quotes.filter(q => q.status === 'Aceptada');
-      if (accepted.length === 0) {
-        // Mock an accepted quote for demonstration if there aren't any
-        accepted = [{
-          id: 'MIVRA-1029',
-          secretCode: 'XYZ123',
-          status: 'Aceptada',
-          createdAt: new Date().toISOString(),
-          origin: 'Barranquilla (Norte)',
-          destination: 'Santa Marta (Rodadero)',
-          estimatedDate: '2026-06-01',
-          description: 'Mudanza ejecutiva',
-          photos: [],
-          clientName: 'Ana Maria',
-          clientPhone: '320000000',
-          estimatedValue: 2500000
-        } as WebQuote];
-      }
+      const accepted = quotes.filter(q => q.status === 'Aceptada');
       setAcceptedQuotes(accepted);
+    });
+
+    // Cargar conductores activos y vehículos disponibles desde Supabase
+    getStaff().then(staff => {
+      const drivers = staff.filter(s => s.role?.toLowerCase().includes('conductor') && s.status === 'Activo');
+      setActiveDrivers(drivers);
+    });
+    getFleet().then(fleet => {
+      const available = fleet.filter(v => v.status === 'Disponible');
+      setAvailableVehicles(available);
     });
 
     async function loadJourneys() {
@@ -90,12 +98,28 @@ export default function RutasActivas() {
         nodesMap[j.id] = await getNodesByJourney(j.id);
       }
       setNodesByJourney(nodesMap);
-      if (journeys.length > 0) {
-        setSelectedJourneyId(journeys[0].id);
-      }
+      
+      setSelectedJourneyId(prev => {
+        if (!prev && journeys.length > 0) return journeys[0].id;
+        return prev;
+      });
       setLoading(false);
     }
     loadJourneys();
+
+    const channel = supabase
+      .channel('dashboard_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journey_nodes' }, () => {
+        loadJourneys();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_journeys' }, () => {
+        loadJourneys();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const activeJourney = activeJourneys.find(j => j.id === selectedJourneyId) || activeJourneys[0];
@@ -273,6 +297,128 @@ export default function RutasActivas() {
     });
   };
 
+  const handleApproveRequest = async (nodeId: string) => {
+    try {
+      await updateJourneyNode(activeJourney.id, nodeId, {
+        status: 'pending',
+        type: 'delivery',
+        is_extra: true,
+        sequence_order: Date.now() // place it at the end, before return
+      });
+      
+      const updatedNodes = await getNodesByJourney(activeJourney.id);
+      setNodesByJourney(prev => ({
+        ...prev,
+        [activeJourney.id]: updatedNodes
+      }));
+      
+      toast({
+        title: "Ruta Aprobada",
+        description: "La solicitud ha sido aprobada y agregada al viaje del conductor."
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo aprobar la solicitud." });
+    }
+  };
+
+  const handleRejectRequest = async (nodeId: string) => {
+    try {
+      await updateJourneyNode(activeJourney.id, nodeId, {
+        status: 'rejected'
+      });
+      
+      const updatedNodes = await getNodesByJourney(activeJourney.id);
+      setNodesByJourney(prev => ({
+        ...prev,
+        [activeJourney.id]: updatedNodes
+      }));
+      
+      toast({
+        title: "Ruta Rechazada",
+        description: "La solicitud ha sido rechazada exitosamente."
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo rechazar la solicitud." });
+    }
+  };
+
+  const handleEditNodeClick = () => {
+    if (activeNode) {
+      setEditNodeData({
+        label: activeNode.label || '',
+        status: activeNode.status || 'pending',
+        time_str: activeNode.time || '--:--',
+        sender: activeNode.details?.sender || '',
+        receiver: activeNode.details?.receiver || '',
+        address: activeNode.details?.address || '',
+        description: activeNode.details?.description || ''
+      });
+      setIsEditNodeOpen(true);
+    }
+  };
+
+  const handleSaveNodeEdit = async () => {
+    if (!activeNode || !activeJourney) return;
+    setIsEditingNode(true);
+    try {
+      const details = { ...activeNode.details };
+      if (editNodeData.sender) details.sender = editNodeData.sender;
+      if (editNodeData.receiver) details.receiver = editNodeData.receiver;
+      if (editNodeData.address) details.address = editNodeData.address;
+      if (editNodeData.description) details.description = editNodeData.description;
+
+      const updates = {
+        label: editNodeData.label,
+        status: editNodeData.status,
+        time_str: editNodeData.time_str,
+        details
+      };
+
+      await updateJourneyNode(activeJourney.id, activeNode.id, updates);
+      
+      const updatedNodes = await getNodesByJourney(activeJourney.id);
+      setNodesByJourney(prev => ({ ...prev, [activeJourney.id]: updatedNodes }));
+      
+      const newActive = updatedNodes.find(n => n.id === activeNode.id);
+      if (newActive) setActiveNode(newActive);
+      
+      setIsEditNodeOpen(false);
+      toast({ title: "Nodo Actualizado", description: "La información se ha guardado exitosamente." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Ocurrió un error." });
+    } finally {
+      setIsEditingNode(false);
+    }
+  };
+
+  const handleDeleteJourney = async () => {
+    if (!activeJourney) return;
+    setIsDeleting(true);
+    try {
+      await deleteJourney(activeJourney.id);
+      toast({ title: "Ruta Eliminada", description: "La ruta ha sido eliminada permanentemente." });
+      
+      const newJourneys = activeJourneys.filter(j => j.id !== activeJourney.id);
+      setActiveJourneys(newJourneys);
+      
+      const newNodesMap = { ...nodesByJourney };
+      delete newNodesMap[activeJourney.id];
+      setNodesByJourney(newNodesMap);
+      
+      setIsDeleteJourneyOpen(false);
+      
+      if (newJourneys.length > 0) {
+        setSelectedJourneyId(newJourneys[0].id);
+      } else {
+        setSelectedJourneyId('');
+      }
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Ocurrió un error al eliminar." });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -330,11 +476,10 @@ export default function RutasActivas() {
                       onChange={e => setNewJourneyData({...newJourneyData, driver: e.target.value})}
                     >
                       <option value="">Seleccione un conductor...</option>
-                      <option value="Carlos Gómez">Carlos Gómez</option>
-                      <option value="Luis Martinez">Luis Martinez</option>
-                      <option value="Andrés Felipe">Andrés Felipe</option>
-                      <option value="Juan Pérez">Juan Pérez</option>
-                      <option value="Roberto Sánchez">Roberto Sánchez</option>
+                      {activeDrivers.map(d => (
+                        <option key={d.id} value={d.name}>{d.name} ({d.role})</option>
+                      ))}
+                      {activeDrivers.length === 0 && <option disabled>No hay conductores activos</option>}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -345,10 +490,10 @@ export default function RutasActivas() {
                       onChange={e => setNewJourneyData({...newJourneyData, truck: e.target.value})}
                     >
                       <option value="">Seleccione un vehículo...</option>
-                      <option value="Furgón NPR - XYZ-123">Furgón NPR - XYZ-123</option>
-                      <option value="Camión Sencillo - ABC-987">Camión Sencillo - ABC-987</option>
-                      <option value="Tractomula - DEF-456">Tractomula - DEF-456</option>
-                      <option value="Furgón NHR - GHI-789">Furgón NHR - GHI-789</option>
+                      {availableVehicles.map(v => (
+                        <option key={v.id} value={`${v.type} - ${v.plate}`}>{v.type} - {v.plate}</option>
+                      ))}
+                      {availableVehicles.length === 0 && <option disabled>No hay vehículos disponibles</option>}
                     </select>
                   </div>
                 </div>
@@ -427,11 +572,10 @@ export default function RutasActivas() {
                       onChange={e => setNewJourneyData({...newJourneyData, driver: e.target.value})}
                     >
                       <option value="">Seleccione un conductor...</option>
-                      <option value="Carlos Gómez">Carlos Gómez</option>
-                      <option value="Luis Martinez">Luis Martinez</option>
-                      <option value="Andrés Felipe">Andrés Felipe</option>
-                      <option value="Juan Pérez">Juan Pérez</option>
-                      <option value="Roberto Sánchez">Roberto Sánchez</option>
+                      {activeDrivers.map(d => (
+                        <option key={d.id} value={d.name}>{d.name} ({d.role})</option>
+                      ))}
+                      {activeDrivers.length === 0 && <option disabled>No hay conductores activos</option>}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -442,10 +586,10 @@ export default function RutasActivas() {
                       onChange={e => setNewJourneyData({...newJourneyData, truck: e.target.value})}
                     >
                       <option value="">Seleccione un vehículo...</option>
-                      <option value="Furgón NPR - XYZ-123">Furgón NPR - XYZ-123</option>
-                      <option value="Camión Sencillo - ABC-987">Camión Sencillo - ABC-987</option>
-                      <option value="Tractomula - DEF-456">Tractomula - DEF-456</option>
-                      <option value="Furgón NHR - GHI-789">Furgón NHR - GHI-789</option>
+                      {availableVehicles.map(v => (
+                        <option key={v.id} value={`${v.type} - ${v.plate}`}>{v.type} - {v.plate}</option>
+                      ))}
+                      {availableVehicles.length === 0 && <option disabled>No hay vehículos disponibles</option>}
                     </select>
                   </div>
                 </div>
@@ -526,7 +670,12 @@ export default function RutasActivas() {
           <header className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-8 border-b border-muted pb-8">
             <div className="space-y-4">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Viaje Activo: <span className="text-primary">{activeJourney.id}</span></h1>
+                <div className="flex items-center gap-4 mb-2">
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground">Viaje Activo: <span className="text-primary">{activeJourney.id}</span></h1>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => setIsDeleteJourneyOpen(true)}>
+                    <Trash2 size={20} />
+                  </Button>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm md:text-base text-muted-foreground bg-muted/30 p-3 rounded-xl border border-muted/50 inline-flex">
                   <p>👤 Conductor: <span className="font-bold text-foreground">{activeJourney.driver}</span></p>
                   <span className="hidden sm:inline text-muted">|</span>
@@ -704,7 +853,7 @@ export default function RutasActivas() {
               <div className="glass-card rounded-[2rem] p-6 md:p-8">
                 <h3 className="text-xl font-bold mb-6">Bitácora de Eventos</h3>
                 <div className="space-y-4">
-                  {nodes.filter(n => n.status !== 'pending' && n.id !== 'return-node' && n.id !== 'closure-node').map((node) => (
+                  {nodes.filter(n => n.status !== 'pending' && n.status !== 'pending_approval' && n.status !== 'rejected').map((node) => (
                     <div key={node.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 hover:bg-muted/50 rounded-2xl transition-colors">
                       <div className="text-sm font-bold text-muted-foreground sm:w-20">{node.time}</div>
                       <div className={cn("hidden sm:block w-2 h-2 rounded-full", node.status === 'completed' ? (node.isExtra ? 'bg-amber-500' : 'bg-primary') : (node.isExtra ? 'bg-amber-500 animate-pulse' : 'bg-primary animate-pulse'))} />
@@ -778,13 +927,97 @@ export default function RutasActivas() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Button className="w-full rounded-xl" variant="outline" disabled={!activeNode.details?.photosCount}>
+                    <div className="space-y-2 mt-4">
+                      <Button 
+                        className="w-full rounded-xl" 
+                        variant="outline" 
+                        disabled={!activeNode.details?.photoUrl && !activeNode.details?.photosCount}
+                        onClick={() => {
+                          if (activeNode.details?.photoUrl) {
+                            setSelectedPhoto(activeNode.details.photoUrl);
+                            setIsPhotoViewerOpen(true);
+                          } else {
+                            toast({ title: "Atención", description: "La foto no se subió correctamente o es de un formato antiguo." });
+                          }
+                        }}
+                      >
                         Ver Evidencia Fotográfica
                       </Button>
-                      <Button className="w-full rounded-xl bg-primary shadow-lg shadow-primary/20">
-                        Editar Información
-                      </Button>
+                      <Dialog open={isEditNodeOpen} onOpenChange={setIsEditNodeOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="w-full rounded-xl bg-primary shadow-lg shadow-primary/20" onClick={handleEditNodeClick}>
+                            Editar Información
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+                          <DialogHeader>
+                            <DialogTitle>Editar Nodo</DialogTitle>
+                            <DialogDescription>
+                              Modifica los detalles de este evento.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                              <Label>Etiqueta / Nombre</Label>
+                              <Input 
+                                value={editNodeData.label} 
+                                onChange={e => setEditNodeData({...editNodeData, label: e.target.value})} 
+                                className="rounded-xl"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Estado</Label>
+                              <select 
+                                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+                                value={editNodeData.status}
+                                onChange={e => setEditNodeData({...editNodeData, status: e.target.value})}
+                              >
+                                <option value="pending">Pendiente / Programado</option>
+                                <option value="current">En Curso</option>
+                                <option value="completed">Completado</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Hora (Texto)</Label>
+                              <Input 
+                                value={editNodeData.time_str} 
+                                onChange={e => setEditNodeData({...editNodeData, time_str: e.target.value})} 
+                                className="rounded-xl"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Remitente</Label>
+                              <Input 
+                                value={editNodeData.sender} 
+                                onChange={e => setEditNodeData({...editNodeData, sender: e.target.value})} 
+                                className="rounded-xl"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Destinatario</Label>
+                              <Input 
+                                value={editNodeData.receiver} 
+                                onChange={e => setEditNodeData({...editNodeData, receiver: e.target.value})} 
+                                className="rounded-xl"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Ubicación / Dirección</Label>
+                              <Input 
+                                value={editNodeData.address} 
+                                onChange={e => setEditNodeData({...editNodeData, address: e.target.value})} 
+                                className="rounded-xl"
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleSaveNodeEdit} disabled={isEditingNode} className="rounded-xl">
+                              {isEditingNode ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+                              Guardar Cambios
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 ) : (
@@ -797,6 +1030,73 @@ export default function RutasActivas() {
                   </div>
                 )}
                 </motion.div>
+
+                {nodes.filter(n => n.status === 'pending_approval').length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 }}
+                    className="glass-card rounded-[2rem] p-6 border-blue-500/30"
+                  >
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-blue-600">
+                      <MapPin size={20} /> Solicitudes Pendientes
+                    </h3>
+                    <div className="space-y-3">
+                      {nodes.filter(n => n.status === 'pending_approval').map(req => (
+                        <div key={req.id} className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                          <p className="font-bold text-sm text-blue-900 mb-1">{req.label}</p>
+                          <div className="flex flex-col gap-1 mb-3">
+                            {req.details?.sender && <p className="text-xs text-blue-800"><b>Remitente:</b> {req.details.sender}</p>}
+                            {req.details?.receiver && <p className="text-xs text-blue-800"><b>Destinatario:</b> {req.details.receiver}</p>}
+                            {req.details?.isCompany !== undefined && (
+                              <p className="text-xs text-blue-800">
+                                <b>¿Empresa?:</b> {req.details.isCompany ? 'Sí' : 'No'}
+                                {req.details.isCompany && req.details.nit && ` (NIT: ${req.details.nit})`}
+                              </p>
+                            )}
+                            {req.details?.cargoDetails && <p className="text-xs text-blue-800"><b>Carga:</b> {req.details.cargoDetails}</p>}
+                            {req.details?.pickupLocation && <p className="text-xs text-blue-800"><b>Recogida:</b> {req.details.pickupLocation}</p>}
+                            {req.details?.destination && <p className="text-xs text-blue-800"><b>Destino:</b> {req.details.destination}</p>}
+                          </div>
+                          <div className="flex justify-between items-start mb-3 border-t border-blue-200/50 pt-2">
+                            <p className="text-xs text-blue-700 italic">{req.details?.description || 'Sin nota adicional'}</p>
+                            {req.details?.photoUrl && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-6 text-[10px] px-2 rounded-md border-blue-300 text-blue-600 hover:bg-blue-100 shrink-0 ml-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPhoto(req.details!.photoUrl!);
+                                  setIsPhotoViewerOpen(true);
+                                }}
+                              >
+                                Ver Evidencia
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs py-1 h-8"
+                              onClick={() => handleApproveRequest(req.id)}
+                            >
+                              Aprobar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1 rounded-lg border-blue-200 text-blue-600 hover:bg-blue-100 text-xs py-1 h-8"
+                              onClick={() => handleRejectRequest(req.id)}
+                            >
+                              Rechazar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
 
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
@@ -818,7 +1118,23 @@ export default function RutasActivas() {
                             <p className="text-sm font-bold text-destructive">${expense.details?.amount?.toLocaleString() || 0}</p>
                           </div>
                           <p className="text-xs text-muted-foreground mb-1">{expense.details?.description}</p>
-                          <p className="text-[10px] text-muted-foreground font-medium">{expense.time}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-[10px] text-muted-foreground font-medium">{expense.time}</p>
+                            {expense.details?.photoUrl && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-6 text-[10px] px-2 rounded-md border-destructive/30 text-destructive hover:bg-destructive/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPhoto(expense.details!.photoUrl!);
+                                  setIsPhotoViewerOpen(true);
+                                }}
+                              >
+                                Ver Evidencia
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))
                     )}
@@ -892,6 +1208,45 @@ export default function RutasActivas() {
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Visor de Evidencia Fotográfica */}
+      <Dialog open={isPhotoViewerOpen} onOpenChange={setIsPhotoViewerOpen}>
+        <DialogContent className="sm:max-w-[600px] rounded-[2rem] p-4 overflow-hidden bg-background">
+          <DialogHeader>
+            <DialogTitle>Evidencia Fotográfica</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center items-center rounded-xl overflow-hidden bg-muted/30 p-2 min-h-[300px]">
+            {selectedPhoto ? (
+              <img src={selectedPhoto} alt="Evidencia" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
+            ) : (
+              <p className="text-muted-foreground">La imagen no está disponible.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPhotoViewerOpen(false)} className="w-full rounded-xl">Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteJourneyOpen} onOpenChange={setIsDeleteJourneyOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2"><Trash2 size={20} /> Eliminar Ruta</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro que deseas eliminar la ruta <b>{activeJourney?.id}</b>? Esta acción no se puede deshacer y borrará todos los eventos y gastos asociados.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsDeleteJourneyOpen(false)} disabled={isDeleting} className="rounded-xl flex-1">
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteJourney} disabled={isDeleting} className="rounded-xl flex-1">
+              {isDeleting ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Sí, Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { createJourney } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { CreateManualQuoteDialog } from '@/components/dashboard/CreateManualQuoteDialog';
 
 const DISPATCH_DRIVERS = [
   "Carlos Rodríguez",
@@ -145,7 +146,7 @@ export default function QuotesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Recibida': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'Recibida': return 'bg-primary/10 text-primary border-primary/20';
       case 'En Análisis': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
       case 'Cotizada': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
       case 'Aceptada': return 'bg-green-500/10 text-green-500 border-green-500/20';
@@ -167,10 +168,13 @@ export default function QuotesPage() {
             <CardHeader className="bg-primary/5 border-b border-white/5 pb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl flex items-center gap-2"><Globe className="text-primary" /> Leads de la Web</CardTitle>
-                  <CardDescription>Cotizaciones solicitadas por clientes en el portal público.</CardDescription>
+                  <CardTitle className="text-2xl flex items-center gap-2"><Globe className="text-primary" /> Leads y Cotizaciones</CardTitle>
+                  <CardDescription>Cotizaciones web y leads manuales registrados.</CardDescription>
                 </div>
-                <Button onClick={fetchWebQuotes} variant="outline" className="rounded-xl">Actualizar</Button>
+                <div className="flex items-center gap-3">
+                  <Button onClick={fetchWebQuotes} variant="outline" className="rounded-xl">Actualizar</Button>
+                  <CreateManualQuoteDialog onQuoteCreated={fetchWebQuotes} />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -224,8 +228,8 @@ export default function QuotesPage() {
                               Cotizar
                             </Button>
                           )}
-                          <Button size="sm" variant="outline" className="rounded-lg h-8 gap-1 bg-background" onClick={() => handleOpenDetails(quote)}>
-                            Gestionar
+                          <Button size="sm" variant="default" className="rounded-lg h-8 gap-1 bg-primary text-white shadow-lg shadow-primary/20" onClick={() => router.push(`/quotes/${quote.id}`)}>
+                            Gestionar Portal
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => handleOpenDetails(quote)}>
                             <MoreHorizontal size={16} />
